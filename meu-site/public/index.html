@@ -1,0 +1,162 @@
+<!DOCTYPE html> 
+<html lang="pt-BR"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title> 🐟 Que peixe é esse? 🐟 </title> 
+    <link rel="stylesheet" href="styles.css?v=22102026_16"> 
+</head> 
+<body> 
+    <div class="notification-toast" role="alert" aria-live="assertive" hidden>
+        <span class="notification-toast-message"></span>
+        <button type="button" class="notification-toast-close" aria-label="Fechar notificação">×</button>
+    </div>
+    <!-- *** CORREÇÃO AQUI: O .page-wrapper AGORA ENVOLVE TODO O CONTEÚDO PRINCIPAL DENTRO DO <body> *** -->
+    <div class="page-wrapper">
+
+        <header> 
+            <h1>🐟 Que Peixe é Esse? 🐟</h1> 
+            <p>Site de aquarista para aquaristas!</p> 
+        </header> 
+
+        <section class="conta-section">
+            <h2>Conta e acesso</h2>
+            <p>Crie uma conta para testar uma identificação de peixe e um cálculo de litros. Para usar as demais ferramentas ou continuar após o teste, assine um plano.</p>
+            <p class="conta-mensagem" role="status" aria-live="polite"></p>
+            <div class="conta-acoes" role="tablist" aria-label="Acesso à conta">
+                <button type="button" class="conta-acao active" id="tabCadastro" role="tab" aria-controls="registerPanel" aria-selected="true">Criar cadastro</button>
+                <button type="button" class="conta-acao" id="tabLogin" role="tab" aria-controls="loginPanel" aria-selected="false">Fazer login</button>
+            </div>
+            <div class="conta-formularios">
+                <div id="registerPanel" role="tabpanel" aria-labelledby="tabCadastro">
+                  <form id="registerForm">
+                    <h3>Criar conta</h3>
+                    <div class="cadastro-campo">
+                        <label for="registerName">Nome</label>
+                        <input id="registerName" name="name" type="text" autocomplete="name" maxlength="255" required>
+                    </div>
+                    <div class="cadastro-campo">
+                        <label for="registerEmail">E-mail</label>
+                        <input id="registerEmail" name="email" type="email" autocomplete="email" maxlength="254" required>
+                    </div>
+                    <div class="cadastro-campo cadastro-campo-senha">
+                        <label for="registerPassword">Senha (mínimo 8 caracteres)</label>
+                        <input id="registerPassword" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+                    </div>
+                    <button class="primary-button cadastro-submit" type="submit">Cadastrar</button>
+                  </form>
+                </div>
+                <div id="loginPanel" role="tabpanel" aria-labelledby="tabLogin" hidden>
+                  <form id="loginForm">
+                    <h3>Entrar</h3>
+                    <label for="loginEmail">E-mail</label>
+                    <input id="loginEmail" name="email" type="email" autocomplete="email" maxlength="254" required>
+                    <label for="loginPassword">Senha</label>
+                    <input id="loginPassword" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+                    <button class="primary-button" type="submit">Entrar</button>
+                  </form>
+                </div>
+            </div>
+            <div class="conta-logada" hidden>
+                <p class="conta-boas-vindas"></p>
+                <p class="conta-assinatura"></p>
+                <p class="conta-teste"></p>
+                <label for="planSelect">Plano de assinatura</label>
+                <select id="planSelect">
+                    <option value="monthly">Mensal — R$ 5,00</option>
+                    <option value="quarterly">Trimestral — R$ 10,00</option>
+                    <option value="semiannual">Semestral — R$ 20,00</option>
+                </select>
+                <button class="primary-button iniciar-checkout" type="button">Assinar para liberar o site</button>
+                <button class="primary-button cancelar-assinatura" type="button" hidden>Cancelar renovação</button>
+                <button class="primary-button sair-conta" type="button">Sair / trocar de conta</button>
+            </div>
+        </section>
+
+        <div class="tabs-container"> 
+            <div class="tab-buttons" role="tablist"> 
+                <button type="button" id="tab-identificarPeixe" class="tab-button active" aria-controls="identificarPeixe" role="tab" aria-selected="true">Identificar Peixe</button> 
+                <button type="button" id="tab-calcularLitros" class="tab-button" aria-controls="calcularLitros" role="tab" aria-selected="false"> Litros do Aquário</button> 
+                <button type="button" id="tab-planejador" class="tab-button" aria-controls="planejador" role="tab" aria-selected="false">Planejar Fauna</button>
+                <button type="button" id="tab-lojasProximas" class="tab-button" aria-controls="lojasProximas" role="tab" aria-selected="false">Lojas Próximas</button>
+            </div> 
+ 
+            <div id="identificarPeixe" class="tab-content active" role="tabpanel" aria-labelledby="tab-identificarPeixe"> 
+                <div class="envieafoto"> 
+                    <label> 
+                        <h2>Envie a foto do peixe!</h2> 
+                        <input type="file" accept="image/*" class="foto" aria-label="Selecionar foto do peixe"> 
+                    </label> 
+                </div> 
+                <p class="privacy-notice">A foto é redimensionada no navegador, enviada ao backend deste site e encaminhada ao serviço externo de IA do Puter para sugerir uma espécie. O nome científico sugerido é pesquisado em guias de aquarismo, e a IA resume os cuidados básicos com links para as fontes. Não envie imagens com pessoas ou informações pessoais. A identificação e as recomendações podem estar incorretas; confira as fontes antes de aplicá-las.</p>
+                <div class="status-message" role="status" aria-live="polite"></div>  
+                <article class="descricao">  
+                    <h3>Espécie:</h3> 
+                    <p class="especie"></p> 
+                    <h4>Cuidados:</h4> 
+                    <p class="cuidados"></p> 
+                    <h5 class="cuidados-fontes-titulo">Fontes consultadas</h5>
+                    <ul class="cuidados-fontes"></ul>
+                </article> 
+            </div> 
+ 
+            <div id="calcularLitros" class="tab-content" role="tabpanel" aria-labelledby="tab-calcularLitros"> 
+                <div class="litros"> 
+                    <h2>Calcule os litros do seu Aquário:</h2> 
+                    <label for="comprimentoAquario" class="sr-only">Comprimento (cm)</label> 
+                    <input type="number" id="comprimentoAquario" name="comprimento" class="comprimento" placeholder="Comprimento (cm)"> 
+                    <label for="alturaAquario" class="sr-only">Altura (cm)</label> 
+                    <input type="number" id="alturaAquario" name="altura" class="altura" placeholder="Altura (cm)"> 
+                    <label for="larguraAquario" class="sr-only">Largura (cm)</label> 
+                    <input type="number" id="larguraAquario" name="largura" class="largura" placeholder="Largura (cm)"> 
+                    <button type="button" value="Calcular" class="calcular-litros primary-button">Calcular</button> 
+                    <p><span class="litros-resultado" aria-live="polite"></span> Litros</p>
+                    <p class="litros-erro" role="status"></p>
+                </div> 
+            </div> 
+ 
+            <div id="planejador" class="tab-content" role="tabpanel" aria-labelledby="tab-planejador" aria-hidden="true">
+                <section class="planejador-section">
+                    <h2>Planejar Fauna</h2>
+                    <p>Compare o peixe identificado com até cinco espécies que você já tem no aquário. Esta é uma orientação inicial, não substitui a avaliação das condições do aquário.</p>
+                    <p>As espécies, os cuidados e a última análise ficam salvos neste navegador.</p>
+                    <p class="peixe-identificado">Peixe identificado: <strong class="planejador-especie">Nenhum peixe identificado ainda.</strong></p>
+                    <h3>Peixes que já vivem no aquário</h3>
+                    <div class="planejador-peixes">
+                        <label for="peixeExistente1">Peixe 1</label>
+                        <input type="text" id="peixeExistente1" class="peixe-existente" placeholder="Nome da espécie">
+                        <label for="peixeExistente2">Peixe 2</label>
+                        <input type="text" id="peixeExistente2" class="peixe-existente" placeholder="Nome da espécie">
+                        <label for="peixeExistente3">Peixe 3</label>
+                        <input type="text" id="peixeExistente3" class="peixe-existente" placeholder="Nome da espécie">
+                        <label for="peixeExistente4">Peixe 4</label>
+                        <input type="text" id="peixeExistente4" class="peixe-existente" placeholder="Nome da espécie">
+                        <label for="peixeExistente5">Peixe 5</label>
+                        <input type="text" id="peixeExistente5" class="peixe-existente" placeholder="Nome da espécie">
+                    </div>
+                    <button type="button" class="analisar-compatibilidade primary-button">Analisar compatibilidade</button>
+                    <p class="planejador-status" role="status" aria-live="polite"></p>
+                    <div class="planejador-resultado" aria-live="polite"></div>
+                </section>
+            </div>
+
+            <div id="lojasProximas" class="tab-content" role="tabpanel" aria-labelledby="tab-lojasProximas" aria-hidden="true">
+                <section class="lojas-section">
+                    <h2>Encontre lojas de aquarismo próximas</h2>
+                    <p>Informe seu CEP para pesquisar lojas de peixes ornamentais e de aquarismo no Google Maps. A busca usa a localização do CEP; a ordem dos resultados é definida pelo Google.</p>
+                    <label for="cepBusca">CEP</label>
+                    <input type="text" id="cepBusca" class="cep-busca" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000">
+                    <button type="button" class="buscar-lojas primary-button">Buscar no Google Maps</button>
+                    <p class="lojas-status" role="status" aria-live="polite"></p>
+                    <small class="lojas-credito">Os resultados e as informações das lojas serão exibidos pelo Google Maps.</small>
+                </section>
+            </div>
+
+        </div> <!-- FIM do .tabs-container: AGORA ele envolve todos os tab-content -->
+        
+
+    </div> 
+
+    <script src="script.js?v=22102026_16"></script> 
+</body> 
+</html>
