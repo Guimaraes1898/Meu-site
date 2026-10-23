@@ -51,6 +51,32 @@ interna. Ao rodar a API diretamente com `pnpm dev`, `FISH_SEARCH_URL` usa
 `http://localhost:8080` por padrão, sem exigir essa variável no `.env`. Para
 iniciar a aplicação e a pesquisa em conjunto na
 VPS, use `docker compose up -d --build` após configurar o `.env`.
+``http://localhost:8080` por padrão, sem exigir essa variável no `.env`.
+
+### Publicação em um VPS Hostinger
+
+O arquivo `docker-compose.hostinger.yml` adiciona um PostgreSQL persistente no
+VPS e configura o backend para acessá-lo pela rede interna do Docker. No
+servidor, instale Docker e o plugin Docker Compose, clone o repositório e crie
+o arquivo `.env` com base em `.env.example`. Não envie o `.env` ao GitHub.
+Gere valores aleatórios para `DB_PASSWORD`, `JWT_SECRET` e `SEARXNG_SECRET`
+diretamente no VPS, por exemplo com `openssl rand -hex 32`; cadastre também
+os tokens do Puter e do Mercado Pago quando for usar esses recursos.
+
+Na pasta do projeto, inicie o banco e o SearXNG, aplique as migrações e então
+inicie o backend:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.hostinger.yml up -d db searxng
+docker compose -f docker-compose.yml -f docker-compose.hostinger.yml build app
+docker compose -f docker-compose.yml -f docker-compose.hostinger.yml run --rm app ./node_modules/.bin/sequelize-cli db:migrate
+docker compose -f docker-compose.yml -f docker-compose.hostinger.yml up -d --build app
+```
+
+O backend fica acessível somente em `127.0.0.1:3001`. Configure o domínio e
+HTTPS no proxy reverso do VPS para encaminhar as requisições a essa porta. A
+porta do PostgreSQL não é publicada para a internet; os dados ficam no volume
+Docker `postgres-data`.
 
 ### Frontend
 
