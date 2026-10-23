@@ -1,0 +1,35 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: host.docker.internal
+      DB_PORT: ${DB_PORT:-5433}
+      DB_NAME: ${DB_NAME:-que-peixe-e-esse-db}
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      MERCADO_PAGO_ACCESS_TOKEN: ${MERCADO_PAGO_ACCESS_TOKEN:-}
+      MERCADO_PAGO_WEBHOOK_SECRET: ${MERCADO_PAGO_WEBHOOK_SECRET:-}
+      MERCADO_PAGO_BACK_URL: ${MERCADO_PAGO_BACK_URL:-}
+      PUTER_AUTH_TOKEN: ${PUTER_AUTH_TOKEN:-}
+      FISH_SEARCH_URL: http://searxng:8080
+    restart: unless-stopped
+  searxng:
+    image: searxng/searxng:latest
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SEARXNG_BASE_URL: http://localhost:8080/
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?Configure SEARXNG_SECRET no arquivo .env}
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+      - searxng-cache:/var/cache/searxng
+    restart: unless-stopped
+
+volumes:
+  searxng-cache:

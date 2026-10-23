@@ -1,0 +1,566 @@
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font-family: Arial, sans-serif;
+	background-image: url("background.site.jpg");
+	background-size: cover;
+	background-position: center;
+	min-height: 100vh;
+}
+
+/* NOVO: O .page-wrapper agora funciona como o contêiner mestre para centralizar e limitar a largura */
+.page-wrapper {
+	max-width: 900px; /* Largura máxima para TODO o conteúdo principal */
+	margin: 0 auto; /* Centraliza o wrapper na tela */
+	padding: 0 20px; /* Adiciona um padding lateral para telas menores, para o conteúdo não colar nas bordas */
+}
+
+/* Seletor geral para parágrafos, pode ser sobrescrito por mais específicos */
+p {
+	color: #c6e115;
+}
+
+header {
+	padding: 20px 0;
+	text-align: center;
+	/* max-width e margin: auto não são mais necessários aqui, pois o .page-wrapper já faz isso para o header */
+}
+
+header h1 {
+	color: #23a1f4f4;
+	font-weight: bold;
+	margin-bottom: 5px;
+	padding: 0;
+	font-size: 2.8em;
+}
+
+/* Seletor específico para parágrafos dentro do header */
+header p {
+	color: #c1e813f4;
+	font-size: 1.1em;
+	margin-top: 0;
+	margin-bottom: 25px;
+	line-height: 1.4;
+}
+
+.tabs-container {
+	/* max-width e margin: auto não são mais necessários aqui, pois o .page-wrapper já faz isso */
+	background-color: #adfcbd0a; /* Fundo transparente para o contêiner principal */
+	border-radius: 8px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+	/* CORREÇÃO AQUI: Padding 0 para o .tabs-container. O espaçamento será dado pelos filhos. */
+	padding: 0;
+	margin-bottom: 20px; /* Espaço abaixo do container de abas */
+	min-height: 400px; /* Ajuste este valor após testar a altura da sua aba mais alta */
+}
+
+.tab-buttons {
+	display: flex;
+	flex-wrap: wrap;
+	border-bottom: 1px solid #53f57381; /* A linha divisória entre botões e conteúdo */
+	/* CORREÇÃO AQUI: Padding para o bloco de botões */
+	padding: 20px 20px 10px 20px; /* padding-top, right, bottom, left. (20px acima, 10px abaixo da linha) */
+	margin-bottom: 0; /* Remove qualquer margem extra que separaria dos conteúdos */
+}
+
+.tab-button {
+	background-color: #53f57381;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	padding: 12px 20px;
+	transition: all 0.3s ease;
+	font-size: 16px;
+	font-weight: bold;
+	color: #18036b;
+	border-top-left-radius: 8px;
+	border-top-right-radius: 8px;
+	margin-right: 5px;
+	margin-bottom: -1px; /* Para que o botão ativo se sobreponha à linha abaixo dele */
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tab-button:hover {
+	background-color: #0c5a0bb0;
+	color: #dce009;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tab-button.active {
+	background-color: #0c5a0bb0;
+	color: #dce009;
+	border: 1px solid #080808;
+	border-bottom: 1px solid #0c5a0bb0; /* Borda inferior do botão ativo para "esconder" a linha divisória */
+	box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
+	z-index: 1;
+	position: relative;
+}
+
+.tab-content {
+	display: none;
+	/* CORREÇÃO AQUI: Padding para o conteúdo da aba */
+	padding: 10px 20px 20px 20px; /* padding-top, right, bottom, left. (10px abaixo da linha, 20px nas laterais e embaixo) */
+	animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+/* Estilos para botões primários */
+.primary-button {
+	background-color: #20b5eb;
+	color: #ffffff;
+	padding: 12px 25px;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 1.1em;
+	font-weight: bold;
+	transition:
+		background-color 0.3s ease,
+		transform 0.2s ease,
+		box-shadow 0.3s ease;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	margin-top: 15px;
+	display: inline-block;
+	text-decoration: none;
+}
+
+.primary-button:hover {
+	background-color: #178ab3;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.primary-button:active {
+	background-color: #0f6c8d;
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos para o botão de upload de foto */
+.envieafoto label {
+	display: inline-block;
+	background-color: #20b5eb;
+	color: #ffffff;
+	padding: 12px 25px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 1.1em;
+	font-weight: bold;
+	transition:
+		background-color 0.3s ease,
+		transform 0.2s ease,
+		box-shadow 0.3s ease;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	margin-top: 15px;
+	position: relative;
+	overflow: hidden;
+	text-align: center;
+}
+
+.envieafoto label input[type="file"] {
+	position: absolute;
+	left: 0;
+	top: 0;
+	opacity: 0;
+	width: 100%;
+	height: 100%;
+	cursor: pointer;
+}
+
+.tab-content h2 {
+	color: #cfe813f4;
+	margin-bottom: 15px;
+}
+
+.envieafoto label h2 {
+	margin: 0;
+	color: inherit;
+	font-size: 1.1em;
+	display: inline;
+}
+
+.envieafoto label:hover {
+	background-color: #178ab3;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.envieafoto label:active {
+	background-color: #0f6c8d;
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.tab-content h3 {
+	color: #cfe813f4;
+	font-size: 2em;
+}
+
+.tab-content h4 {
+	color: #cfe813f4;
+	font-size: 2em;
+}
+
+/* Estilos de labels dentro do conteúdo da aba */
+.tab-content label {
+	display: block;
+	margin-bottom: 10px;
+	font-weight: bold;
+	color: #d7e42a;
+}
+
+/* Estilos de inputs de texto/número dentro do conteúdo da aba */
+.tab-content input[type="text"],
+.tab-content input[type="number"] {
+	width: calc(100% - 20px); /* Ajuste para caber dentro do padding do pai */
+	padding: 10px;
+	margin-bottom: 15px;
+	border: 3px solid #20b5eb;
+	border-radius: 5px;
+	background-color: #ffffff;
+	color: #10100f;
+}
+
+.conta-section {
+	display: block;
+	width: 100%;
+	max-width: 100%;
+	margin: 12px 0 20px;
+	padding: 12px 16px;
+	border: 3px solid #20b5eb;
+	border-radius: 5px;
+	background-color: #dfe22512;
+	color: #e7eb0e;
+}
+
+.page-wrapper .conta-section h2,
+.page-wrapper .conta-section h3 {
+	color: #cfe813f4;
+}
+
+.page-wrapper .conta-section h2 {
+	margin: 0 0 8px;
+	font-size: 1.35em;
+}
+
+.conta-section > p:not(.conta-mensagem) {
+	margin: 0 0 8px;
+	font-size: 0.9em;
+	line-height: 1.35;
+}
+
+.conta-acoes {
+	display: flex;
+	gap: 6px;
+	margin: 8px 0;
+}
+
+.conta-acoes[hidden],
+.conta-formularios[hidden],
+.conta-logada[hidden] {
+	display: none;
+}
+
+.conta-acao {
+	padding: 4px 8px;
+	border: 1px solid #20b5eb;
+	border-radius: 4px;
+	background: transparent;
+	color: #e7eb0e;
+	font: inherit;
+	font-weight: bold;
+	cursor: pointer;
+}
+
+.conta-acao.active,
+.conta-acao:hover {
+	background: #20b5eb;
+	color: #fff;
+}
+
+.conta-formularios {
+	display: block;
+}
+
+.conta-formularios [role="tabpanel"]:not([hidden]) form {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.conta-formularios #registerForm {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 0 16px;
+}
+
+.cadastro-campo {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	align-items: flex-start;
+}
+
+.cadastro-campo-senha,
+.cadastro-submit {
+	grid-column: 1 / -1;
+}
+
+.page-wrapper .conta-section .conta-formularios h3 {
+	grid-column: 1 / -1;
+	margin: 4px 0 8px;
+	font-size: 1.2em;
+}
+
+.conta-section input,
+.conta-section select {
+	width: 100%;
+	margin-bottom: 8px;
+	padding: 8px;
+	border: 2px solid #20b5eb;
+	border-radius: 5px;
+	background-color: #fff;
+	color: #10100f;
+}
+
+.cadastro-campo label {
+	margin-bottom: 4px;
+}
+
+.cadastro-submit {
+	justify-self: start;
+}
+
+.conta-formularios .primary-button {
+	margin-top: 6px;
+	padding: 8px 18px;
+	font-size: 1em;
+}
+
+.conta-mensagem,
+.conta-assinatura,
+.conta-teste {
+	min-height: 1.5em;
+	overflow-wrap: anywhere;
+}
+
+.conta-mensagem:empty {
+	display: none;
+}
+
+.conta-mensagem[data-type="success"] {
+	padding: 12px;
+	border: 1px solid #2ecc71;
+	border-radius: 6px;
+	background: #14532d;
+	color: #fff;
+}
+
+.notification-toast:not([hidden]) {
+	position: fixed;
+	z-index: 1000;
+	top: 50%;
+	left: 50%;
+	display: flex;
+	width: min(520px, calc(100vw - 32px));
+	align-items: flex-start;
+	gap: 18px;
+	padding: 22px 24px;
+	border: 3px solid #ffb4ab;
+	border-left: 8px solid #ff453a;
+	border-radius: 14px;
+	background: #3b1010;
+	box-shadow: 0 16px 48px rgb(0 0 0 / 65%);
+	color: #fff;
+	font-size: 1.1rem;
+	font-weight: bold;
+	line-height: 1.45;
+	transform: translate(-50%, -50%);
+	animation: notification-enter 180ms ease-out;
+}
+
+.notification-toast-message {
+	flex: 1;
+}
+
+.notification-toast-close {
+	flex: 0 0 auto;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font-size: 1.5rem;
+	line-height: 1;
+	cursor: pointer;
+}
+
+@keyframes notification-enter {
+	from {
+		transform: translate(-50%, calc(-50% - 8px));
+		opacity: 0;
+	}
+	to {
+		transform: translate(-50%, -50%);
+		opacity: 1;
+	}
+}
+
+/* Estilos de parágrafos dentro do conteúdo da aba */
+.tab-content p {
+	margin-bottom: 10px;
+	line-height: 1.5;
+	color: #10cbe8;
+}
+
+.privacy-notice {
+	font-size: 0.9em;
+}
+
+.cuidados {
+	white-space: pre-line;
+}
+
+.cuidados-fontes {
+	padding-left: 24px;
+}
+
+.cuidados-fontes li {
+	margin: 8px 0;
+}
+
+.cuidados-fontes a {
+	color: #8be4ff;
+}
+
+/* Seções internas das abas */
+.envieafoto,
+.descricao,
+.litros,
+.planejador-section,
+.lojas-section {
+	display: block;
+	padding: 20px;
+	margin-bottom: 20px;
+	border: 3px solid #20b5eb;
+	border-radius: 5px;
+	background-color: #dfe22506;
+	color: #e7eb0e;
+}
+
+.planejador-peixes {
+	display: grid;
+	grid-template-columns: minmax(90px, 0.3fr) minmax(0, 1fr);
+	gap: 0 12px;
+	align-items: center;
+}
+
+.planejador-peixes label {
+	margin-bottom: 15px;
+}
+
+.planejador-resultado {
+	margin-top: 16px;
+	color: #e7eb0e;
+	white-space: pre-wrap;
+	line-height: 1.6;
+}
+
+.planejador-status {
+	min-height: 1.5em;
+}
+
+.lojas-resultados {
+	padding-left: 24px;
+	color: #e7eb0e;
+}
+
+.lojas-resultados li {
+	margin: 16px 0;
+}
+
+.lojas-resultados p {
+	margin: 6px 0;
+}
+
+.lojas-resultados a {
+	color: #8be4ff;
+}
+
+.lojas-status {
+	min-height: 1.5em;
+}
+
+.lojas-credito {
+	color: #e7eb0e;
+}
+
+.litros input {
+	margin-right: 10px;
+	width: calc(33% - 20px);
+}
+
+/* Estilos para imagens responsivas */
+.tab-content img {
+	max-width: 100%;
+	height: auto;
+	display: block;
+	margin: 20px auto;
+	border-radius: 8px;
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+	/* Ajusta o padding do wrapper principal em telas menores */
+	.page-wrapper {
+		padding: 0 10px; /* Menos padding nas laterais em telas pequenas */
+	}
+	header {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+	.tab-buttons {
+		padding: 20px 10px 10px 10px; /* Ajusta padding lateral para mobile */
+	}
+	.tab-button {
+		padding: 10px 15px;
+		font-size: 14px;
+	}
+	.litros input {
+		width: calc(100% - 20px);
+		margin-right: 0;
+	}
+	.tab-content {
+		padding: 10px 10px 20px 10px; /* Ajusta padding lateral para mobile */
+	}
+	.conta-formularios #registerForm {
+		grid-template-columns: 1fr;
+	}
+	.cadastro-campo,
+	.cadastro-submit {
+		grid-column: 1;
+	}
+	.envieafoto,
+	.descricao,
+	.litros,
+	.planejador-section,
+	.lojas-section {
+		padding: 15px;
+	}
+}
+span.litros-resultado {
+	font-weight: bold;
+	color: #c7e41e;
+	font-size: 2em;
+}
