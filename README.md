@@ -48,9 +48,6 @@ instância no host, em vez de iniciar um banco PostgreSQL separado.
 O SearXNG é executado em um contêiner separado e a porta `8080` fica vinculada
 somente a `127.0.0.1`; o backend no Compose se comunica com ele pela rede
 interna. Ao rodar a API diretamente com `pnpm dev`, `FISH_SEARCH_URL` usa
-`http://localhost:8080` por padrão, sem exigir essa variável no `.env`. Para
-iniciar a aplicação e a pesquisa em conjunto na
-VPS, use `docker compose up -d --build` após configurar o `.env`.
 ``http://localhost:8080` por padrão, sem exigir essa variável no `.env`.
 
 ### Publicação em um VPS Hostinger
