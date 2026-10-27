@@ -10,10 +10,11 @@ export class MercadoPagoConfigurationError extends Error {
 }
 
 export class MercadoPagoApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, providerCode) {
     super(message);
     this.name = 'MercadoPagoApiError';
     this.status = status;
+    this.providerCode = providerCode;
   }
 }
 
@@ -56,9 +57,24 @@ async function request(path, { method = 'GET', body, idempotencyKey } = {}) {
   }
 
   if (!response.ok) {
+    const reason = [data?.code, data?.message]
+      .filter((value) => typeof value === 'string')
+      .join(': ');
+    const providerCode = [
+      data?.code,
+      data?.error,
+      ...(Array.isArray(data?.cause)
+        ? data.cause.map((cause) => cause?.code)
+        : []),
+    ].find(
+      (value) =>
+        Number.isSafeInteger(value) ||
+        (typeof value === 'string' && /^[a-z\d._-]{1,80}$/i.test(value)),
+    );
     throw new MercadoPagoApiError(
       response.status,
-      `Mercado Pago request failed with status ${response.status}.`,
+      `Mercado Pago request failed with status ${response.status}${reason ? ` (${reason})` : ''}.`,
+      providerCode === undefined ? undefined : String(providerCode),
     );
   }
 

@@ -259,8 +259,14 @@ class SubscriptionController {
       }
       if (error instanceof MercadoPagoApiError) {
         console.error('Mercado Pago subscription creation failed:', error);
+        const details = [
+          `HTTP ${error.status}`,
+          error.providerCode ? `código ${error.providerCode}` : null,
+        ]
+          .filter(Boolean)
+          .join(', ');
         return response.status(502).json({
-          message: 'Não foi possível iniciar a assinatura no Mercado Pago.',
+          message: `Não foi possível iniciar a assinatura no Mercado Pago (${details}).`,
         });
       }
       throw error;
