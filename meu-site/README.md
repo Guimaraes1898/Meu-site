@@ -112,6 +112,7 @@ indisponível em vez de gerar recomendações sem fontes.
 - `POST /sessions` — recebe `email` e `password`; retorna um token Bearer válido por uma hora.
 - `POST /subscriptions/checkout` — requer `Authorization: Bearer <token>` e JSON como `{"plan":"quarterly"}`; retorna `checkoutUrl`.
 - `GET /subscriptions/me` — requer autenticação; mostra o estado local da assinatura.
+- Se o Mercado Pago recusar o checkout, a resposta `502` informa o status HTTP e o código de erro do provedor, sem expor a mensagem bruta.
 - `POST /subscriptions/cancel` — requer autenticação; cancela a renovação no Mercado Pago e conserva a data final do período pago.
 - `POST /webhooks/mercadopago` — endpoint público para notificações; a assinatura HMAC é verificada antes de consultar o recurso diretamente na API do Mercado Pago.
 

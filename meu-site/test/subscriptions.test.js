@@ -4,6 +4,7 @@ import test from 'node:test';
 import { jwtVerify } from 'jose';
 import {
   createPreapproval,
+  MercadoPagoApiError,
   verifyWebhookSignature,
 } from '../src/app/services/MercadoPagoService.js';
 import { hashPassword, verifyPassword } from '../src/app/services/passwords.js';
@@ -163,6 +164,50 @@ test('checkout creates a Mercado Pago preapproval using the selected plan', asyn
         currency_id: 'BRL',
       },
     });
+  } finally {
+    globalThis.fetch = previousFetch;
+    if (previousAccessToken === undefined) {
+      delete process.env.MERCADO_PAGO_ACCESS_TOKEN;
+    } else {
+      process.env.MERCADO_PAGO_ACCESS_TOKEN = previousAccessToken;
+    }
+    if (previousBackUrl === undefined) {
+      delete process.env.MERCADO_PAGO_BACK_URL;
+    } else {
+      process.env.MERCADO_PAGO_BACK_URL = previousBackUrl;
+    }
+  }
+});
+
+test('checkout errors expose only a safe Mercado Pago status and code', async () => {
+  const previousFetch = globalThis.fetch;
+  const previousAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  const previousBackUrl = process.env.MERCADO_PAGO_BACK_URL;
+  process.env.MERCADO_PAGO_ACCESS_TOKEN = 'test-access-token';
+  process.env.MERCADO_PAGO_BACK_URL = 'https://example.com/return';
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        error: 'bad_request',
+        message: 'Invalid payer email: member@example.com',
+      }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } },
+    );
+
+  try {
+    await assert.rejects(
+      createPreapproval({
+        subscriptionId: 'subscription-123',
+        email: 'member@example.com',
+        plan: subscriptionPlans.monthly,
+      }),
+      (error) => {
+        assert.ok(error instanceof MercadoPagoApiError);
+        assert.equal(error.status, 400);
+        assert.equal(error.providerCode, 'bad_request');
+        return true;
+      },
+    );
   } finally {
     globalThis.fetch = previousFetch;
     if (previousAccessToken === undefined) {
