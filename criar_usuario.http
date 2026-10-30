@@ -1,0 +1,8 @@
+POST https://api.mercadopago.com/users/test_user
+Authorization: Bearer <ACCESS_TOKEN_DA_APLICAÇÃO>
+Content-Type: application/json
+
+{
+  "site_id": "MLB",
+  "description": "Usuario de teste comprador"
+}

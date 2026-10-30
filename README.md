@@ -28,7 +28,7 @@ O cadastro e o login são necessários para usar as ferramentas e associar pagam
    ```
 
    Mantenha tokens e segredos apenas no `.env` local e nunca os envie ao navegador ou ao controle de versão.
-4. Para pagamentos, configure credenciais de teste do Mercado Pago em `MERCADO_PAGO_ACCESS_TOKEN`, o segredo de Webhooks em `MERCADO_PAGO_WEBHOOK_SECRET` e uma URL de retorno HTTPS em `MERCADO_PAGO_BACK_URL`. Use credenciais de teste até validar o fluxo.
+4. Para pagamentos, configure no `.env` o Access Token da mesma aplicação Mercado Pago em `MERCADO_PAGO_ACCESS_TOKEN`, o segredo de Webhooks em `MERCADO_PAGO_WEBHOOK_SECRET` e uma URL de retorno HTTPS em `MERCADO_PAGO_BACK_URL`. Use credenciais de teste até validar o fluxo; o Compose não possui credenciais padrão.
 5. Aponte a URL de notificações Webhooks do Mercado Pago para `POST /webhooks/mercadopago` em um endereço HTTPS acessível pelo Mercado Pago. Se estiver desenvolvendo localmente, use um túnel HTTPS. Habilite os eventos de assinatura e pagamentos autorizados.
 6. Inicie a instância SearXNG privada pelo Docker Compose, instale dependências, aplique as migrações e inicie a API:
 
@@ -58,7 +58,15 @@ servidor, instale Docker e o plugin Docker Compose, clone o repositório e crie
 o arquivo `.env` com base em `.env.example`. Não envie o `.env` ao GitHub.
 Gere valores aleatórios para `DB_PASSWORD`, `JWT_SECRET` e `SEARXNG_SECRET`
 diretamente no VPS, por exemplo com `openssl rand -hex 32`; cadastre também
-os tokens do Puter e do Mercado Pago quando for usar esses recursos.
+os tokens do Puter e do Mercado Pago quando for usar esses recursos. Defina
+`SITE_DOMAIN` com o domínio público que aponta para o VPS.
+
+Se o VPS já usa Traefik com o provider Docker, as labels do serviço `app`
+criam a rota HTTPS e solicitam o certificado pelo resolver `letsencrypt`.
+Defina `SITE_DOMAIN` no `.env` antes de iniciar os serviços. O proxy deve
+estar com as portas 80 e 443 publicadas e o DNS do domínio deve apontar para
+o VPS. A aplicação continua publicada em `127.0.0.1:3001`; o PostgreSQL não
+fica acessível pela internet.
 
 Na pasta do projeto, inicie o banco e o SearXNG, aplique as migrações e então
 inicie o backend:
@@ -66,14 +74,17 @@ inicie o backend:
 ```sh
 docker compose -f docker-compose.yml -f docker-compose.hostinger.yml up -d db searxng
 docker compose -f docker-compose.yml -f docker-compose.hostinger.yml build app
-docker compose -f docker-compose.yml -f docker-compose.hostinger.yml run --rm app ./node_modules/.bin/sequelize-cli db:migrate
+docker compose -f docker-compose.yml -f docker-compose.hostinger.yml run --rm app npm run db:migrate
 docker compose -f docker-compose.yml -f docker-compose.hostinger.yml up -d --build app
 ```
 
-O backend fica acessível somente em `127.0.0.1:3001`. Configure o domínio e
-HTTPS no proxy reverso do VPS para encaminhar as requisições a essa porta. A
-porta do PostgreSQL não é publicada para a internet; os dados ficam no volume
-Docker `postgres-data`.
+Depois da inicialização, acesse `https://que-peixe-e-esse.com`. No Mercado Pago,
+configure a URL de retorno como `https://que-peixe-e-esse.com` e o webhook de
+assinaturas/pagamentos autorizados em
+`https://que-peixe-e-esse.com/webhooks/mercadopago`. Use credenciais sandbox primeiro
+e configure o segredo do webhook correspondente em
+`MERCADO_PAGO_WEBHOOK_SECRET`. A porta do PostgreSQL não é publicada para a
+internet; os dados ficam no volume Docker `postgres-data`.
 
 ### Frontend
 

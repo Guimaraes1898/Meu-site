@@ -11,6 +11,7 @@ ENV NODE_ENV=production
 
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json ./
+COPY .sequelizerc.cjs ./
 COPY src ./src
 COPY public ./public
 

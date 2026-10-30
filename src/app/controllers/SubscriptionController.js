@@ -9,7 +9,7 @@ import {
   getPreapproval,
   MercadoPagoApiError,
   MercadoPagoConfigurationError,
-  verifyWebhookSignature,
+  getWebhookSignatureFailure,
 } from '../services/MercadoPagoService.js';
 import { subscriptionPlans } from '../services/subscriptionPlans.js';
 
@@ -139,21 +139,20 @@ async function synchronizeAuthorizedPayment(paymentId) {
     'refunded',
     'charged_back',
   ];
-  const innerStatus = payment.payment?.status ?? payment.status;
-  if (!paymentStatuses.includes(innerStatus)) {
+  if (!paymentStatuses.includes(payment.status)) {
     throw new Error(
-      `Unsupported Mercado Pago authorized payment status: ${innerStatus}`,
+      `Unsupported Mercado Pago authorized payment status: ${payment.status}`,
     );
   }
 
   const paymentDate = toDate(payment.date_created ?? payment.debit_date);
-  const values = { lastPaymentStatus: innerStatus };
+  const values = { lastPaymentStatus: payment.status };
   if (paymentDate) {
     values.lastPaymentAt = paymentDate;
   }
   await subscription.update(values);
 
-  if (innerStatus === 'approved') {
+  if (payment.status === 'approved') {
     const preapproval = await getPreapproval(providerSubscriptionId);
     return synchronizePreapproval(preapproval);
   }
@@ -162,6 +161,7 @@ async function synchronizeAuthorizedPayment(paymentId) {
 }
 
 class SubscriptionController {
+  // Este é o método `checkout` que você deve SUBSTITUIR COMPLETAMENTE
   async checkout(request, response) {
     let data;
     try {
@@ -206,29 +206,34 @@ class SubscriptionController {
           return { conflict: true };
         }
 
-        const plan = subscriptionPlans[data.plan];
+        const planDetailsFromService = subscriptionPlans[data.plan]; // Obtém os detalhes do plano
+        if (!planDetailsFromService) { // Adicionado para garantir que o plano existe
+          return { invalidPlan: true };
+        }
+
         const subscription = await Subscription.create(
           {
             userId: user.id,
             plan: data.plan,
-            amount: plan.amount,
+            amount: planDetailsFromService.amount, // Use o amount do plano do serviço
             currency: 'BRL',
-            status: 'pending',
+            status: 'pending', // Status inicial enquanto aguarda pagamento
           },
           { transaction },
         );
-        return { subscription, user };
+        return { subscription, user, plan: planDetailsFromService }; // Retorna os detalhes do plano também
       },
     );
 
     if (checkout.userNotFound) {
       return response.status(401).json({
-        message: 'Autenticação necessária.',
+        message: 'Usuário não encontrado.',
       });
     }
+
     if (checkout.conflict) {
       return response.status(409).json({
-        message: 'Já existe uma assinatura em andamento para esta conta.',
+        message: 'Você já possui uma assinatura ativa ou pendente.',
       });
     }
 
@@ -260,14 +265,8 @@ class SubscriptionController {
       }
       if (error instanceof MercadoPagoApiError) {
         console.error('Mercado Pago subscription creation failed:', error);
-        const details = [
-          `HTTP ${error.status}`,
-          error.providerCode ? `código ${error.providerCode}` : null,
-        ]
-          .filter(Boolean)
-          .join(', ');
         return response.status(502).json({
-          message: `Não foi possível iniciar a assinatura no Mercado Pago (${details}).`,
+          message: 'Não foi possível iniciar a assinatura no Mercado Pago.',
         });
       }
       throw error;
@@ -321,31 +320,54 @@ class SubscriptionController {
     try {
       await cancelPreapproval(subscription.providerSubscriptionId);
       await subscription.update({
-        status: 'cancelled',
-        cancelAtPeriodEnd: true,
+        providerSubscriptionId: mpPreapproval.id,
       });
+
       return response.status(200).json({
-        id: subscription.id,
-        status: 'cancelled',
-        accessUntil: subscription.currentPeriodEnd,
+        message: 'Assinatura iniciada com sucesso. Redirecione para o Mercado Pago.',
+        paymentUrl: mpPreapproval.init_point, // Esta é a URL que você envia para o frontend
       });
+
     } catch (error) {
+      console.error('--- ERRO AO CHAMAR createPreapproval do Mercado Pago ---');
+      console.error('Erro:', error); // Imprime o objeto de erro completo
+      console.error('----------------------------------------------------');
+
+      // Tratamento de erros específicos
       if (error instanceof MercadoPagoConfigurationError) {
-        return response.status(503).json({
-          message: 'Os pagamentos não estão configurados no servidor.',
+        return response.status(500).json({
+          message: 'Erro de configuração do Mercado Pago no servidor.',
+          details: error.message,
+        });
+      } else if (error instanceof MercadoPagoApiError) {
+        return response.status(error.status || 500).json({
+          message: `Erro da API do Mercado Pago: ${error.message}`,
+          mpCode: error.providerCode,
+        });
+      } else {
+        // Erro inesperado (ex: problema de rede, erro no seu código antes do MP)
+        return response.status(500).json({
+          message: 'Ocorreu um erro interno inesperado ao processar a assinatura.',
+          details: error.message,
         });
       }
-      if (error instanceof MercadoPagoApiError) {
-        console.error('Mercado Pago subscription cancellation failed:', error);
-        return response.status(502).json({
-          message: 'Não foi possível cancelar a assinatura no Mercado Pago.',
-        });
-      }
-      throw error;
     }
   }
 
+
   async webhook(request, response) {
+    const isEmptyProbe =
+      request.body &&
+      typeof request.body === 'object' &&
+      !Array.isArray(request.body) &&
+      Object.keys(request.body).length === 0 &&
+      !request.query['data.id'] &&
+      !request.query.type &&
+      !request.query.topic;
+    if (isEmptyProbe) {
+      return response.status(200).json({ received: true });
+    }
+
     const dataId = String(
       request.body?.data?.id ?? request.query['data.id'] ?? '',
     );
@@ -355,14 +377,20 @@ class SubscriptionController {
         message: 'As notificações do Mercado Pago não estão configuradas.',
       });
     }
-    const validSignature = verifyWebhookSignature({
+    const signatureFailure = getWebhookSignatureFailure({
       signature: request.get('x-signature'),
       requestId: request.get('x-request-id'),
       dataId,
       secret,
     });
 
-    if (!validSignature) {
+    if (signatureFailure) {
+      console.warn('Mercado Pago webhook signature validation failed:', {
+        reason: signatureFailure,
+        dataIdSource: request.query['data.id'] ? 'query' : 'body',
+        notificationType:
+          request.body?.type ?? request.query.type ?? request.query.topic ?? null,
+      });
       return response.status(401).json({
         message: 'Assinatura de notificação inválida.',
       });
