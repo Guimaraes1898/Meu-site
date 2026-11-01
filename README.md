@@ -41,7 +41,7 @@ O cadastro e o login são necessários para usar as ferramentas e associar pagam
 
 Para usar a mesma instância do Beekeeper Studio, configure no `.env` o host,
 a porta, o banco, o usuário e a senha dessa conexão. Os padrões locais são
-`localhost:5433`, banco `que-peixe-e-esse-db` e usuário `admin`; preencha
+`localhost:5432`, banco `que-peixe-e-esse-db` e usuário `admin`; preencha
 `DB_PASSWORD` com a senha usada no Beekeeper. A tabela de usuários é
 `public.users`. O serviço `app` do Docker Compose também se conecta a essa
 instância no host, em vez de iniciar um banco PostgreSQL separado.

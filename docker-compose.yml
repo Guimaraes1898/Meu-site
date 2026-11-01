@@ -8,15 +8,15 @@ services:
       NODE_ENV: production
       PORT: 3001
       DB_HOST: '${DB_HOST:-host.docker.internal}'
-      DB_PORT: '${DB_PORT:-5433}'
+      DB_PORT: '${DB_PORT:-5432}'
       DB_NAME: '${DB_NAME:-que-peixe-e-esse-db}'
       DB_USER: '${DB_USER:-admin}'
-      DB_PASSWORD: '${DB_PASSWORD:-132097-.env}'
-      JWT_SECRET: '${JWT_SECRET:-change-this-to-a-random-string-of-at-least-32-characters}'
-      MERCADO_PAGO_ACCESS_TOKEN: '${MERCADO_PAGO_ACCESS_TOKEN:-APP_USR-7545647754710382-102422-1347e6193797415949466a68643eed47-200321058}'
-      MERCADO_PAGO_WEBHOOK_SECRET: '${MERCADO_PAGO_WEBHOOK_SECRET:-5aa57baf3546aa866ee6d87a3e3312e7e91e4b6962a12289602f4e6ce4976ac1}'
-      MERCADO_PAGO_BACK_URL: '${MERCADO_PAGO_BACK_URL:-https://que-peixe-e-esse/assinatura/status}'
-      PUTER_AUTH_TOKEN: '${PUTER_AUTH_TOKEN:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYyIn0.eyJ0IjoidCIsInYiOiIyIiwidG9rZW5fdWlkIjoiZTE0YjZiMjktZjY0OS00YzE2LTk4YjQtYjMxNTVlYTA5ZjViIiwidXUiOiJnNmx4bEFCalJUNkhwRE1aNmt0WHhnPT0iLCJzdSI6ImxzLzNOWlNpVFVhV3hWT0htWC82bmc9PSIsImFpIjoiZzZseGxBQmpSVDZIcERNWjZrdFh4Zz09IiwiZnVsbF9hY2Nlc3MiOnRydWUsImlhdCI6MTc5MjcxMzMzMX0.-hogGwhu1isSvnqle0qYSx1J5KifC8uaxiATzADpTto}'
+      DB_PASSWORD: '${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}'
+      JWT_SECRET: '${JWT_SECRET:?Configure JWT_SECRET no arquivo .env}'
+      MERCADO_PAGO_ACCESS_TOKEN: '${MERCADO_PAGO_ACCESS_TOKEN:-}'
+      MERCADO_PAGO_WEBHOOK_SECRET: '${MERCADO_PAGO_WEBHOOK_SECRET:-}'
+      MERCADO_PAGO_BACK_URL: '${MERCADO_PAGO_BACK_URL:-https://que-peixe-e-esse.com}'
+      PUTER_AUTH_TOKEN: '${PUTER_AUTH_TOKEN:-}'
       FISH_SEARCH_URL: '${FISH_SEARCH_URL:-http://searxng:8080}'
     restart: unless-stopped
   searxng:
@@ -25,7 +25,7 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       SEARXNG_BASE_URL: '${SEARXNG_BASE_URL:-http://localhost:8080/}'
-      SEARXNG_SECRET: '${SEARXNG_SECRET:-53a8511e6cc774e9e553c084486ade3a39c3528d40584a89bbcb4437d0a375fa}'
+      SEARXNG_SECRET: '${SEARXNG_SECRET:?Configure SEARXNG_SECRET no arquivo .env}'
     volumes:
       - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
       - searxng-cache:/var/cache/searxng

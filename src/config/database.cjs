@@ -6,10 +6,12 @@ if (!process.env.DB_PASSWORD) {
   );
 }
 
+// Todas as configurações vêm das variáveis DB_*; em produção o Docker Compose
+// injeta DB_HOST=db e DB_PORT=5432 no serviço app.
 const config = {
   dialect: 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT || 5433),
+  port: Number(process.env.DB_PORT || 5432),
   username: process.env.DB_USER || 'admin',
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || 'que-peixe-e-esse-db',
@@ -17,6 +19,7 @@ const config = {
     timestamps: true,
     underscored: true,
   },
+  logging: process.env.NODE_ENV === 'production' ? false : undefined,
 };
 
 module.exports = {

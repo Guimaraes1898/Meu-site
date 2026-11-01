@@ -1,11 +1,11 @@
-FROM node:alpine AS dependencies
+FROM node:22-alpine AS dependencies
 WORKDIR /app
 
-RUN npm install --global pnpm@8
-COPY package.json pnpm-lock.yaml ./
+RUN npm install --global pnpm@10
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
-FROM node:alpine AS production
+FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 
