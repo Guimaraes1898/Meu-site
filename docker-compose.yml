@@ -3,14 +3,29 @@ services:
   app:
     build:
       context: .
-    ports:
-      - "127.0.0.1:3001:3001"
+    # Remova ou comente a linha de ports se não precisar acessar diretamente do host
+    # - "127.0.0.1:3001:3001" # Não é necessário para o Traefik, ele usa a rede interna
+
+    # --- LABELS DO TRAEFIK ---
+    labels:
+      # Habilita o Traefik para este serviço
+      - "traefik.enable=true"
+      # Define o nome do roteador no Traefik
+      - "traefik.http.routers.que-peixe-e-esse-app.rule=Host(`que-peixe-e-esse.com`)"
+      # Redireciona HTTP para HTTPS (se você tiver um roteador HTTP separado no Traefik)
+      - "traefik.http.routers.que-peixe-e-esse-app.entrypoints=websecure" # Usa o entrypoint HTTPS
+      - "traefik.http.routers.que-peixe-e-esse-app.tls.certresolver=lets-encrypt" # Usa o Let's Encrypt para TLS
+      # Define o serviço interno para o Traefik (o nome do contêiner e a porta)
+      - "traefik.http.services.que-peixe-e-esse-app.loadbalancer.server.port=3001"
+      # Opcional: Para usar middleware de redirecionamento HTTP para HTTPS, se necessário
+      # - "traefik.http.routers.que-peixe-e-esse-app.middlewares=redirect-to-https@docker"
+    # --- FIM DAS LABELS DO TRAEFIK ---
+
     environment:
       NODE_ENV: production
       PORT: 3001
-      # --- Corrigir DB_HOST para apontar para o serviço 'db' ---
-      DB_HOST: 'db' # <--- AGORA APONTA PARA O NOME DO SERVIÇO DE DB
-      DB_PORT: '${DB_PORT:-5432}' # Manter 5432
+      DB_HOST: 'db'
+      DB_PORT: '${DB_PORT:-5432}'
       DB_NAME: '${DB_NAME:-que-peixe-e-esse-db}'
       DB_USER: '${DB_USER:-admin}'
       DB_PASSWORD: '${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}'
@@ -21,7 +36,7 @@ services:
       PUTER_AUTH_TOKEN: '${PUTER_AUTH_TOKEN:-}'
       FISH_SEARCH_URL: '${FISH_SEARCH_URL:-http://searxng:8080}'
     restart: unless-stopped
-    depends_on: # <--- Adicionar dependência no serviço 'db'
+    depends_on:
       - db
 
   db: # <--- ADICIONE ESTE NOVO SERVIÇO PARA O POSTGRESQL
@@ -33,8 +48,8 @@ services:
       POSTGRES_PASSWORD: '${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}' # <--- Use a mesma variável de senha
     volumes:
       - db_data:/var/lib/postgresql/data # <--- Adicionar um volume para persistência dos dados
-    # ports:
-    #   - "5432:5432" # OPCIONAL: Mapeie se precisar acessar o DB do host. Para comunicação interna, não é necessário.
+    ports:
+      - "5432:5432" # OPCIONAL: Mapeie se precisar acessar o DB do host. Para comunicação interna, não é necessário.
 
   searxng:
     image: searxng/searxng:latest
