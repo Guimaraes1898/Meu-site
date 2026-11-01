@@ -1,3 +1,4 @@
+version: '3.8'
 services:
   app:
     build:
@@ -7,8 +8,9 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DB_HOST: '${DB_HOST:-host.docker.internal}'
-      DB_PORT: '${DB_PORT:-5432}'
+      # --- Corrigir DB_HOST para apontar para o serviço 'db' ---
+      DB_HOST: 'db' # <--- AGORA APONTA PARA O NOME DO SERVIÇO DE DB
+      DB_PORT: '${DB_PORT:-5432}' # Manter 5432
       DB_NAME: '${DB_NAME:-que-peixe-e-esse-db}'
       DB_USER: '${DB_USER:-admin}'
       DB_PASSWORD: '${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}'
@@ -19,6 +21,21 @@ services:
       PUTER_AUTH_TOKEN: '${PUTER_AUTH_TOKEN:-}'
       FISH_SEARCH_URL: '${FISH_SEARCH_URL:-http://searxng:8080}'
     restart: unless-stopped
+    depends_on: # <--- Adicionar dependência no serviço 'db'
+      - db
+
+  db: # <--- ADICIONE ESTE NOVO SERVIÇO PARA O POSTGRESQL
+    image: postgres:17-alpine # Usar a mesma imagem que você já tem rodando
+    restart: always
+    environment:
+      POSTGRES_DB: '${DB_NAME:-que-peixe-e-esse-db}' # <--- Use a mesma variável de nome de DB
+      POSTGRES_USER: '${DB_USER:-admin}' # <--- Use a mesma variável de usuário
+      POSTGRES_PASSWORD: '${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}' # <--- Use a mesma variável de senha
+    volumes:
+      - db_data:/var/lib/postgresql/data # <--- Adicionar um volume para persistência dos dados
+    # ports:
+    #   - "5432:5432" # OPCIONAL: Mapeie se precisar acessar o DB do host. Para comunicação interna, não é necessário.
+
   searxng:
     image: searxng/searxng:latest
     ports:
@@ -33,3 +50,4 @@ services:
 
 volumes:
   searxng-cache:
+  db_data: # <--- Adicione este volume para o banco de dados
