@@ -1,2 +1,6 @@
-allowBuilds:
-  bcrypt: false
+packages:
+  - '.'
+
+onlyBuiltDependencies:
+  - bcrypt
+    
