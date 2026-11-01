@@ -9,6 +9,8 @@ FROM node:22-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY package.json ./
 COPY .sequelizerc.cjs ./
