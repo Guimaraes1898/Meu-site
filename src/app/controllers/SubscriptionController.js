@@ -139,20 +139,21 @@ async function synchronizeAuthorizedPayment(paymentId) {
     'refunded',
     'charged_back',
   ];
-  if (!paymentStatuses.includes(payment.status)) {
+  const innerStatus = payment.payment?.status ?? payment.status;
+  if (!paymentStatuses.includes(innerStatus)) {
     throw new Error(
-      `Unsupported Mercado Pago authorized payment status: ${payment.status}`,
+      `Unsupported Mercado Pago authorized payment status: ${innerStatus}`,
     );
   }
 
   const paymentDate = toDate(payment.date_created ?? payment.debit_date);
-  const values = { lastPaymentStatus: payment.status };
+  const values = { lastPaymentStatus: innerStatus };
   if (paymentDate) {
     values.lastPaymentAt = paymentDate;
   }
   await subscription.update(values);
 
-  if (payment.status === 'approved') {
+  if (innerStatus === 'approved') {
     const preapproval = await getPreapproval(providerSubscriptionId);
     return synchronizePreapproval(preapproval);
   }

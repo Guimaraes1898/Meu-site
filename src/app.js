@@ -15,6 +15,9 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(routes);
 app.use(express.static(publicDirectory));
+app.get('/{*splat}', (_request, response) => {
+  response.sendFile(join(publicDirectory, 'index.html'));
+});
 app.use((error, _request, response, next) => {
   if (response.headersSent) {
     return next(error);

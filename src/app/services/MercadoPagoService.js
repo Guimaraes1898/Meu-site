@@ -99,7 +99,7 @@ export async function createPreapproval({ subscriptionId, email, plan }) {
   if (
     !['https:', 'http:'].includes(parsedBackUrl.protocol) ||
     (parsedBackUrl.protocol === 'http:' &&
-      !['localhost', '127.0.0.1'].includes(parsedBackUrl.hostname))
+      !['que-peixe-e-esse'].includes(parsedBackUrl.hostname))
   ) {
     throw new MercadoPagoConfigurationError(
       'MERCADO_PAGO_BACK_URL must use HTTPS outside localhost.',
