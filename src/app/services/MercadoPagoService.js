@@ -155,8 +155,26 @@ export function verifyWebhookSignature({
   secret,
   now = Date.now(),
 }) {
+  return (
+    getWebhookSignatureFailure({
+      signature,
+      requestId,
+      dataId,
+      secret,
+      now,
+    }) === null
+  );
+}
+
+export function getWebhookSignatureFailure({
+  signature,
+  requestId,
+  dataId,
+  secret,
+  now = Date.now(),
+}) {
   if (!signature || !requestId || !dataId || !secret) {
-    return false;
+    return 'missing_fields';
   }
 
   const fields = Object.fromEntries(
@@ -168,16 +186,22 @@ export function verifyWebhookSignature({
   const timestamp = Number(fields.ts);
   if (
     !Number.isSafeInteger(timestamp) ||
-    Math.abs(Math.floor(now / 1000) - timestamp) > 300 ||
     !/^[a-f\d]{64}$/i.test(fields.v1 ?? '')
   ) {
-    return false;
+    return 'invalid_format';
+  }
+  if (Math.abs(Math.floor(now / 1000) - timestamp) > 300) {
+    return 'timestamp_out_of_range';
   }
 
   const manifest = `id:${dataId.toLowerCase()};request-id:${requestId};ts:${fields.ts};`;
   const expected = createHmac('sha256', secret).update(manifest).digest();
   const received = Buffer.from(fields.v1, 'hex');
-  return (
-    received.length === expected.length && timingSafeEqual(received, expected)
-  );
+  if (
+    received.length !== expected.length ||
+    !timingSafeEqual(received, expected)
+  ) {
+    return 'signature_mismatch';
+  }
+  return null;
 }
