@@ -215,13 +215,13 @@ class SubscriptionController {
           {
             userId: user.id,
             plan: data.plan,
-            amount: planDetailsFromService.amount, // Use o amount do plano do serviço
+            amount: planDetailsFromService.amount, 
             currency: 'BRL',
-            status: 'pending', // Status inicial enquanto aguarda pagamento
+            status: 'pending', 
           },
           { transaction },
         );
-        return { subscription, user, plan: planDetailsFromService }; // Retorna os detalhes do plano também
+        return { subscription, user, plan: planDetailsFromService }; 
       },
     );
 
@@ -325,15 +325,15 @@ class SubscriptionController {
 
       return response.status(200).json({
         message: 'Assinatura iniciada com sucesso. Redirecione para o Mercado Pago.',
-        paymentUrl: mpPreapproval.init_point, // Esta é a URL que você envia para o frontend
+        paymentUrl: mpPreapproval.init_point, 
       });
 
     } catch (error) {
       console.error('--- ERRO AO CHAMAR createPreapproval do Mercado Pago ---');
-      console.error('Erro:', error); // Imprime o objeto de erro completo
+      console.error('Erro:', error); 
       console.error('----------------------------------------------------');
 
-      // Tratamento de erros específicos
+    
       if (error instanceof MercadoPagoConfigurationError) {
         return response.status(500).json({
           message: 'Erro de configuração do Mercado Pago no servidor.',
@@ -345,7 +345,7 @@ class SubscriptionController {
           mpCode: error.providerCode,
         });
       } else {
-        // Erro inesperado (ex: problema de rede, erro no seu código antes do MP)
+       
         return response.status(500).json({
           message: 'Ocorreu um erro interno inesperado ao processar a assinatura.',
           details: error.message,
@@ -356,83 +356,106 @@ class SubscriptionController {
 
 
   async webhook(request, response) {
-    const isEmptyProbe =
-      request.body &&
-      typeof request.body === 'object' &&
-      !Array.isArray(request.body) &&
-      Object.keys(request.body).length === 0 &&
-      !request.query['data.id'] &&
-      !request.query.type &&
-      !request.query.topic;
-    if (isEmptyProbe) {
-      return response.status(200).json({ received: true });
-    }
+  console.log('--- Webhook do Mercado Pago recebido! ---'); // <-- NOVO LOG
+  console.log('Request Headers:', request.headers); // <-- NOVO LOG
+  console.log('Request Query:', request.query);   // <-- NOVO LOG
+  console.log('Request Body:', JSON.stringify(request.body, null, 2)); // <-- NOVO LOG
 
-    const dataId = String(
-      request.body?.data?.id ?? request.query['data.id'] ?? '',
-    );
-    const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
-    if (!secret) {
-      return response.status(503).json({
-        message: 'As notificações do Mercado Pago não estão configuradas.',
-      });
-    }
-    const signatureFailure = getWebhookSignatureFailure({
-      signature: request.get('x-signature'),
-      requestId: request.get('x-request-id'),
-      dataId,
-      secret,
-    });
-
-    if (signatureFailure) {
-      console.warn('Mercado Pago webhook signature validation failed:', {
-        reason: signatureFailure,
-        dataIdSource: request.query['data.id'] ? 'query' : 'body',
-        notificationType:
-          request.body?.type ?? request.query.type ?? request.query.topic ?? null,
-      });
-      return response.status(401).json({
-        message: 'Assinatura de notificação inválida.',
-      });
-    }
-
-    const notificationType =
-      request.body?.type ?? request.query.type ?? request.query.topic;
-    try {
-      if (
-        notificationType === 'subscription_preapproval' ||
-        notificationType === 'preapproval'
-      ) {
-        const preapproval = await getPreapproval(dataId);
-        await synchronizePreapproval(preapproval);
-      } else if (
-        notificationType === 'subscription_authorized_payment' ||
-        notificationType === 'authorized_payment'
-      ) {
-        await synchronizeAuthorizedPayment(dataId);
-      } else {
-        console.warn(
-          'Ignoring unsupported Mercado Pago notification type:',
-          notificationType,
-        );
-      }
-    } catch (error) {
-      if (error instanceof MercadoPagoConfigurationError) {
-        return response.status(503).json({
-          message: 'Os pagamentos não estão configurados no servidor.',
-        });
-      }
-      if (error instanceof MercadoPagoApiError) {
-        console.error('Mercado Pago webhook processing failed:', error);
-        return response.status(502).json({
-          message: 'Não foi possível processar a notificação do Mercado Pago.',
-        });
-      }
-      throw error;
-    }
-
+  const isEmptyProbe =
+    request.body &&
+    typeof request.body === 'object' &&
+    !Array.isArray(request.body) &&
+    Object.keys(request.body).length === 0 &&
+    !request.query['data.id'] &&
+    !request.query.type &&
+    !request.query.topic;
+  if (isEmptyProbe) {
+    console.log('Webhook é uma requisição de probe vazia.'); // <-- NOVO LOG
     return response.status(200).json({ received: true });
   }
+
+  const dataId = String(
+    request.body?.data?.id ?? request.query['data.id'] ?? '',
+  );
+  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  if (!secret) {
+    console.error('ERRO: MERCADO_PAGO_WEBHOOK_SECRET não configurado.'); // <-- NOVO LOG
+    return response.status(503).json({
+      message: 'As notificações do Mercado Pago não estão configuradas.',
+    });
+  }
+  console.log('Webhook dataId:', dataId); // <-- NOVO LOG
+  console.log('Webhook secret (primeiros 5 chars):', secret.substring(0, 5) + '...'); // <-- NOVO LOG
+
+  const signatureFailure = getWebhookSignatureFailure({
+    signature: request.get('x-signature'),
+    requestId: request.get('x-request-id'),
+    dataId,
+    secret,
+  });
+
+  if (signatureFailure) {
+    console.warn('Mercado Pago webhook signature validation failed:', {
+      reason: signatureFailure,
+      dataIdSource: request.query['data.id'] ? 'query' : 'body',
+      notificationType:
+        request.body?.type ?? request.query.type ?? request.query.topic ?? null,
+    });
+    return response.status(401).json({
+      message: 'Assinatura de notificação inválida.',
+    });
+  }
+  console.log('Webhook signature validated successfully!'); // <-- NOVO LOG
+
+  const notificationType =
+    request.body?.type ?? request.query.type ?? request.query.topic;
+  console.log('Webhook notificationType:', notificationType); // <-- NOVO LOG
+
+  try {
+    if (
+      notificationType === 'subscription_preapproval' ||
+      notificationType === 'preapproval'
+    ) {
+      console.log('Processing preapproval notification...'); // <-- NOVO LOG
+      const preapproval = await getPreapproval(dataId);
+      console.log('Preapproval fetched from MP:', JSON.stringify(preapproval, null, 2)); // <-- NOVO LOG
+      await synchronizePreapproval(preapproval);
+      console.log('Preapproval synchronized successfully!'); // <-- NOVO LOG
+    } else if (
+      notificationType === 'subscription_authorized_payment' ||
+      notificationType === 'authorized_payment'
+    ) {
+      console.log('Processing authorized payment notification...'); // <-- NOVO LOG
+      const payment = await getAuthorizedPayment(dataId); // <-- Precisamos dessa variável 'payment'
+      console.log('Payment fetched from MP:', JSON.stringify(payment, null, 2)); // <-- NOVO LOG
+      await synchronizeAuthorizedPayment(dataId); // <-- Este aqui precisa do 'payment.preapproval_id' ou similar
+      console.log('Authorized payment synchronized successfully!'); // <-- NOVO LOG
+    } else {
+      console.warn(
+        'Ignoring unsupported Mercado Pago notification type:',
+        notificationType,
+      );
+    }
+  } catch (error) {
+    if (error instanceof MercadoPagoConfigurationError) {
+      console.error('Mercado Pago webhook processing failed (Configuration Error):', error); // <-- NOVO LOG
+      return response.status(503).json({
+        message: 'Os pagamentos não estão configurados no servidor.',
+      });
+    }
+    if (error instanceof MercadoPagoApiError) {
+      console.error('Mercado Pago webhook processing failed (API Error):', error); // <-- NOVO LOG
+      return response.status(error.status || 502).json({ // Use error.status se disponível
+        message: 'Não foi possível processar a notificação do Mercado Pago.',
+      });
+    }
+    console.error('Mercado Pago webhook processing failed (Unhandled Error):', error); // <-- NOVO LOG
+    throw error;
+  }
+
+  console.log('Webhook processed successfully, sending 200 OK.'); // <-- NOVO LOG
+  return response.status(200).json({ received: true });
+}
 }
 
 export default new SubscriptionController();
