@@ -11,7 +11,7 @@ services:
       # Habilita o Traefik para este serviço
       - "traefik.enable=true"
       # Define o nome do roteador no Traefik
-      - "traefik.http.routers.que-peixe-e-esse-app.rule=Host(`que-peixe-e-esse.com`)"
+      - "traefik.http.routers.que-peixe-e-esse-app.rule=Host(`que-peixe-e-esse.com`) || Host(`www.que-peixe-e-esse.com`)"
       # Redireciona HTTP para HTTPS (se você tiver um roteador HTTP separado no Traefik)
       - "traefik.http.routers.que-peixe-e-esse-app.entrypoints=websecure" # Usa o entrypoint HTTPS
       - "traefik.http.routers.que-peixe-e-esse-app.tls.certresolver=lets-encrypt" # Usa o Let's Encrypt para TLS
