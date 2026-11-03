@@ -99,28 +99,33 @@ export async function createPreapproval({ subscriptionId, email, plan }) {
   if (
     !['https:', 'http:'].includes(parsedBackUrl.protocol) ||
     (parsedBackUrl.protocol === 'http:' &&
-      !['que-peixe-e-esse'].includes(parsedBackUrl.hostname))
+      !['que-peixe-e-esse.com'].includes(parsedBackUrl.hostname)) // <-- Ajuste o hostname aqui para o domínio completo
   ) {
     throw new MercadoPagoConfigurationError(
       'MERCADO_PAGO_BACK_URL must use HTTPS outside localhost.',
     );
   }
 
+  // --- Crie o payload em uma variável ANTES de usar ---
+  const mercadoPagoPayload = {
+    reason: `Assinatura ${plan.name}`,
+    external_reference: subscriptionId,
+    payer_email: email,
+    back_url: backUrl,
+    auto_recurring: {
+      frequency: plan.frequency,
+      frequency_type: 'months', // <-- VERIFIQUE SE plan.frequency_type DEVERIA SER USADO AQUI ou se 'months' é fixo
+      transaction_amount: plan.amount,
+      currency_id: 'BRL',
+    },
+  };
+
+  console.log('Mercado Pago Preapproval Payload:', JSON.stringify(mercadoPagoPayload, null, 2)); // <-- AGORA VAI FUNCIONAR
+
   const result = await request('/preapproval', {
     method: 'POST',
     idempotencyKey: subscriptionId,
-    body: {
-      reason: `Assinatura ${plan.name}`,
-      external_reference: subscriptionId,
-      payer_email: email,
-      back_url: backUrl,
-      auto_recurring: {
-        frequency: plan.frequency,
-        frequency_type: 'months',
-        transaction_amount: plan.amount,
-        currency_id: 'BRL',
-      },
-    },
+    body: mercadoPagoPayload, // <-- Passe a variável payload aqui
   });
 
   if (typeof result.id !== 'string' || typeof result.init_point !== 'string') {
@@ -131,17 +136,6 @@ export async function createPreapproval({ subscriptionId, email, plan }) {
   }
 
   return result;
-}
-
-export async function getPreapproval(id) {
-  return request(`/preapproval/${encodeURIComponent(id)}`);
-}
-
-export async function cancelPreapproval(id) {
-  return request(`/preapproval/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    body: { status: 'cancelled' },
-  });
 }
 
 export async function getAuthorizedPayment(id) {
