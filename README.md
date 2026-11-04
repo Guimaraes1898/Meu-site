@@ -141,7 +141,7 @@ indisponível em vez de gerar recomendações sem fontes.
 - `POST /fish/identify` — requer autenticação; recebe uma imagem `image/jpeg` de até 2 MB, executa identificação e cuidados no backend e registra o uso gratuito somente após a operação ser concluída.
 - `POST /tools/calculate-liters` — requer autenticação; recebe `{"length":50,"width":30,"height":30}` em centímetros e devolve o volume em litros.
 - `POST /tools/plan-fauna` — requer autenticação e assinatura ativa; recebe `{"newSpecies":"Betta splendens","existingSpecies":["Corydoras paleatus"]}`.
-- `POST /tools/find-stores` — requer autenticação e assinatura ativa; recebe `{"cep":"01001000"}` e devolve a URL de pesquisa do Google Maps.
+- `POST /tools/find-stores` — requer autenticação e assinatura ativa; recebe `{"cep":"01001000"}` e devolve a URL de pesquisa do Google Maps. O CEP é consultado com fallback entre AwesomeAPI, ViaCEP e BrasilAPI.
 - `POST /users` — cria uma conta com `name`, `email` e `password` (de 8 a 128 caracteres e até 72 bytes em UTF-8). A senha é armazenada com bcrypt; em caso de dados inválidos, a resposta inclui o campo e o motivo.
 - `POST /sessions` — recebe `email` e `password`; retorna um token Bearer válido por uma hora.
 - `POST /subscriptions/checkout` — requer `Authorization: Bearer <token>` e JSON como `{"plan":"quarterly"}`; retorna `checkoutUrl`.

@@ -53,6 +53,104 @@ class StoreLookupError extends Error {
   }
 }
 
+const cepProviders = [
+  {
+    name: 'awesomeapi',
+    url: (cep) => `https://cep.awesomeapi.com.br/json/${cep}`,
+    parse: (data) => ({
+      address: data.address,
+      district: data.district,
+      city: data.city,
+      state: data.state,
+    }),
+  },
+  {
+    name: 'viacep',
+    url: (cep) => `https://viacep.com.br/ws/${cep}/json/`,
+    parse: (data) => ({
+      address: data.logradouro,
+      district: data.bairro,
+      city: data.localidade,
+      state: data.uf,
+    }),
+  },
+  {
+    name: 'brasilapi',
+    url: (cep) => `https://brasilapi.com.br/api/cep/v2/${cep}`,
+    parse: (data) => ({
+      address: data.street,
+      district: data.neighborhood,
+      city: data.city,
+      state: data.state,
+    }),
+  },
+];
+
+async function fetchCepFromProvider(provider, cep) {
+  let response;
+  try {
+    response = await fetch(provider.url(cep), {
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch (error) {
+    console.warn(`Busca de CEP: provedor ${provider.name} falhou.`, error);
+    return null;
+  }
+
+  if (response.status === 404 || response.status === 400) {
+    throw new StoreLookupError(
+      404,
+      'CEP não encontrado. Confira o número e tente novamente.',
+    );
+  }
+  if (!response.ok) {
+    console.warn(
+      `Busca de CEP: provedor ${provider.name} respondeu HTTP ${response.status}.`,
+    );
+    return null;
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    console.warn(
+      `Busca de CEP: provedor ${provider.name} retornou dados inválidos.`,
+      error,
+    );
+    return null;
+  }
+
+  if (data.erro === true || data.erro === 'true') {
+    throw new StoreLookupError(
+      404,
+      'CEP não encontrado. Confira o número e tente novamente.',
+    );
+  }
+
+  const address = provider.parse(data);
+  if (!address.city || !address.state) {
+    console.warn(
+      `Busca de CEP: provedor ${provider.name} retornou endereço incompleto.`,
+    );
+    return null;
+  }
+  return address;
+}
+
+async function lookupCep(cep) {
+  for (const provider of cepProviders) {
+    const address = await fetchCepFromProvider(provider, cep);
+    if (address) {
+      return address;
+    }
+  }
+  throw new StoreLookupError(
+    503,
+    'O serviço de CEP está indisponível agora. Tente novamente.',
+  );
+}
+
 class ToolController {
   async calculateLiters(request, response) {
     let measurements;
@@ -140,50 +238,7 @@ class ToolController {
         request.user.id,
         'find-stores',
         async () => {
-          let responseFromCep;
-          try {
-            responseFromCep = await fetch(
-              `https://cep.awesomeapi.com.br/json/${input.cep}`,
-              { signal: AbortSignal.timeout(5000) },
-            );
-          } catch (error) {
-            throw new StoreLookupError(
-              503,
-              'Não foi possível localizar o CEP agora. Tente novamente.',
-              { cause: error },
-            );
-          }
-
-          if (responseFromCep.status === 404) {
-            throw new StoreLookupError(
-              404,
-              'CEP não encontrado. Confira o número e tente novamente.',
-            );
-          }
-          if (!responseFromCep.ok) {
-            throw new StoreLookupError(
-              503,
-              'O serviço de CEP está indisponível agora. Tente novamente.',
-            );
-          }
-
-          let address;
-          try {
-            address = await responseFromCep.json();
-          } catch (error) {
-            throw new StoreLookupError(
-              503,
-              'O serviço de CEP retornou dados inválidos. Tente novamente.',
-              { cause: error },
-            );
-          }
-
-          if (!address.address || !address.city || !address.state) {
-            throw new StoreLookupError(
-              422,
-              'Não foi possível obter o endereço completo desse CEP para pesquisar no Google Maps.',
-            );
-          }
+          const address = await lookupCep(input.cep);
 
           const locality = [
             address.address,
