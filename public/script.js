@@ -152,6 +152,7 @@ function clearAccount() {
   document.querySelector('.conta-acoes').hidden = false;
   document.querySelector('.conta-formularios').hidden = false;
   document.querySelector('.conta-logada').hidden = true;
+  document.querySelector('.conta-intro').hidden = false;
   showAccountForm('login', { clearMessage: false });
 }
 
@@ -207,6 +208,7 @@ function renderAccount(account, { loginCompleted = false } = {}) {
   document.querySelector('.conta-acoes').hidden = true;
   document.querySelector('.conta-formularios').hidden = true;
   document.querySelector('.conta-logada').hidden = false;
+  document.querySelector('.conta-intro').hidden = true;
   document.querySelector('.conta-boas-vindas').textContent =
     `Olá, ${account.user.name}.`;
   if (loginCompleted) {
@@ -221,6 +223,12 @@ function renderAccount(account, { loginCompleted = false } = {}) {
   const subscriptionStatus = document.querySelector('.conta-assinatura');
   const cancelButton = document.querySelector('.cancelar-assinatura');
   const checkoutButton = document.querySelector('.iniciar-checkout');
+  const canSubscribe =
+    !account.subscriptionActive && account.subscription?.status !== 'pending';
+  for (const element of document.querySelectorAll('.conta-plano')) {
+    element.hidden = !canSubscribe;
+  }
+  checkoutButton.hidden = !canSubscribe;
   if (account.subscriptionActive) {
     const subscription = account.subscription;
     const endDate = subscription.currentPeriodEnd
@@ -229,17 +237,14 @@ function renderAccount(account, { loginCompleted = false } = {}) {
     subscriptionStatus.textContent = `Assinatura ativa.${endDate}`;
     cancelButton.hidden =
       subscription.status !== 'authorized' || subscription.cancelAtPeriodEnd;
-    checkoutButton.hidden = true;
   } else if (account.subscription?.status === 'pending') {
     subscriptionStatus.textContent =
       'Pagamento aguardando confirmação do Mercado Pago.';
     cancelButton.hidden = !account.subscription.hasProviderSubscription;
-    checkoutButton.hidden = true;
   } else {
     subscriptionStatus.textContent =
       'Sem assinatura ativa. Assine para liberar todas as ferramentas sem limite.';
     cancelButton.hidden = true;
-    checkoutButton.hidden = false;
   }
 
   const fishRemaining = account.tools['identify-fish'].remaining;

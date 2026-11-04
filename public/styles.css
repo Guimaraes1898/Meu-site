@@ -270,7 +270,9 @@ header p {
 
 .conta-acoes[hidden],
 .conta-formularios[hidden],
-.conta-logada[hidden] {
+.conta-logada[hidden],
+.conta-intro[hidden],
+.conta-plano[hidden] {
 	display: none;
 }
 

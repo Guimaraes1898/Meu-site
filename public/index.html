@@ -4,7 +4,7 @@
     <meta charset="UTF-8"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <title> 🐟 Que peixe é esse? 🐟 </title> 
-    <link rel="stylesheet" href="/styles.css?v=22102026_16"> 
+    <link rel="stylesheet" href="/styles.css?v=04112026_01"> 
 </head> 
 <body> 
     <div class="notification-toast" role="alert" aria-live="assertive" hidden>
@@ -21,7 +21,7 @@
 
         <section class="conta-section">
             <h2>Conta e acesso</h2>
-            <p>Crie uma conta para testar uma identificação de peixe e um cálculo de litros. Para usar as demais ferramentas ou continuar após o teste, assine um plano.</p>
+            <p class="conta-intro">Crie uma conta para testar uma identificação de peixe e um cálculo de litros. Para usar as demais ferramentas ou continuar após o teste, assine um plano.</p>
             <p class="conta-mensagem" role="status" aria-live="polite"></p>
             <div class="conta-acoes" role="tablist" aria-label="Acesso à conta">
                 <button type="button" class="conta-acao active" id="tabCadastro" role="tab" aria-controls="registerPanel" aria-selected="true">Criar cadastro</button>
@@ -61,8 +61,8 @@
                 <p class="conta-boas-vindas"></p>
                 <p class="conta-assinatura"></p>
                 <p class="conta-teste"></p>
-                <label for="planSelect">Plano de assinatura</label>
-                <select id="planSelect">
+                <label class="conta-plano" for="planSelect">Plano de assinatura</label>
+                <select class="conta-plano" id="planSelect">
                     <option value="monthly">Mensal — R$ 5,00</option>
                     <option value="quarterly">Trimestral — R$ 10,00</option>
                     <option value="semiannual">Semestral — R$ 20,00</option>
@@ -157,6 +157,6 @@
 
     </div> 
 
-    <script src="/script.js?v=22102026_16"></script> 
+    <script src="/script.js?v=04112026_01"></script> 
 </body> 
 </html>
