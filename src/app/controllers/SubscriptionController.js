@@ -7,9 +7,10 @@ import {
   createPreapproval,
   getAuthorizedPayment,
   getPreapproval,
+  getWebhookSignatureFailure,
   MercadoPagoApiError,
   MercadoPagoConfigurationError,
-  getWebhookSignatureFailure,
+  searchAuthorizedPayments,
 } from '../services/MercadoPagoService.js';
 import { subscriptionPlans } from '../services/subscriptionPlans.js';
 
@@ -109,18 +110,86 @@ async function synchronizePreapproval(resource) {
   return subscription;
 }
 
+const paymentStatuses = [
+  'approved',
+  'pending',
+  'rejected',
+  'cancelled',
+  'refunded',
+  'charged_back',
+];
+const installmentStatuses = [
+  'processed',
+  'pending',
+  'waiting for gateway',
+  'recycling',
+];
+
+// A parcela (authorized payment) tem status próprio no nível superior
+// ('processed', 'recycling', ...) e o status real do pagamento fica em
+// `payment.status`. Uma parcela 'processed' pode ter pagamento aprovado ou
+// recusado, então só o status aninhado define o último pagamento.
+function resolveAuthorizedPaymentStatus(authorizedPayment) {
+  const nestedStatus = authorizedPayment.payment?.status;
+  if (typeof nestedStatus === 'string') {
+    if (!paymentStatuses.includes(nestedStatus)) {
+      throw new Error(
+        `Unsupported Mercado Pago payment status: ${nestedStatus}`,
+      );
+    }
+    return nestedStatus;
+  }
+
+  const { status } = authorizedPayment;
+  if (typeof status === 'string' && paymentStatuses.includes(status)) {
+    return status;
+  }
+  if (typeof status === 'string' && installmentStatuses.includes(status)) {
+    return null;
+  }
+  throw new Error(
+    `Unsupported Mercado Pago authorized payment status: ${status}`,
+  );
+}
+
+async function applyAuthorizedPayment(subscription, authorizedPayment) {
+  const status = resolveAuthorizedPaymentStatus(authorizedPayment);
+  const paymentDate = toDate(
+    authorizedPayment.date_created ?? authorizedPayment.debit_date,
+  );
+  const values = {};
+  if (status) {
+    values.lastPaymentStatus = status;
+  }
+  if (paymentDate) {
+    values.lastPaymentAt = paymentDate;
+  }
+  if (Object.keys(values).length > 0) {
+    await subscription.update(values);
+  }
+
+  if (status === 'approved') {
+    const preapproval = await getPreapproval(
+      subscription.providerSubscriptionId,
+    );
+    return synchronizePreapproval(preapproval);
+  }
+
+  return subscription;
+}
+
 async function synchronizeAuthorizedPayment(paymentId) {
-  const payment = await getAuthorizedPayment(paymentId);
+  const authorizedPayment = await getAuthorizedPayment(paymentId);
   if (
-    typeof payment.preapproval_id !== 'string' &&
-    typeof payment.preapproval_id !== 'number'
+    typeof authorizedPayment.preapproval_id !== 'string' &&
+    typeof authorizedPayment.preapproval_id !== 'number'
   ) {
     throw new Error(
       'Mercado Pago authorized payment has no associated subscription.',
     );
   }
 
-  const providerSubscriptionId = String(payment.preapproval_id);
+  const providerSubscriptionId = String(authorizedPayment.preapproval_id);
   const subscription = await Subscription.findOne({
     where: { providerSubscriptionId },
   });
@@ -131,37 +200,63 @@ async function synchronizeAuthorizedPayment(paymentId) {
     return null;
   }
 
-  const paymentStatuses = [
-    'approved',
-    'pending',
-    'rejected',
-    'cancelled',
-    'refunded',
-    'charged_back',
-  ];
-  if (!paymentStatuses.includes(payment.status)) {
-    throw new Error(
-      `Unsupported Mercado Pago authorized payment status: ${payment.status}`,
+  return applyAuthorizedPayment(subscription, authorizedPayment);
+}
+
+// Busca o estado real no Mercado Pago para corrigir o registro local quando
+// algum webhook foi perdido ou rejeitado.
+async function reconcileWithMercadoPago(subscription) {
+  if (!subscription?.providerSubscriptionId) {
+    return;
+  }
+  try {
+    const preapproval = await getPreapproval(
+      subscription.providerSubscriptionId,
     );
-  }
+    await synchronizePreapproval(preapproval);
 
-  const paymentDate = toDate(payment.date_created ?? payment.debit_date);
-  const values = { lastPaymentStatus: payment.status };
-  if (paymentDate) {
-    values.lastPaymentAt = paymentDate;
+    const result = await searchAuthorizedPayments(
+      subscription.providerSubscriptionId,
+    );
+    const payments = Array.isArray(result?.results) ? result.results : [];
+    if (payments.length > 0) {
+      const latest = payments.reduce((previous, current) => {
+        const previousDate = toDate(previous?.date_created);
+        const currentDate = toDate(current?.date_created);
+        if (!previousDate) {
+          return current;
+        }
+        if (!currentDate) {
+          return previous;
+        }
+        return previousDate >= currentDate ? previous : current;
+      });
+      await subscription.reload();
+      await applyAuthorizedPayment(subscription, latest);
+    }
+  } catch (error) {
+    console.error('Failed to reconcile subscription with Mercado Pago:', error);
   }
-  await subscription.update(values);
+}
 
-  if (payment.status === 'approved') {
-    const preapproval = await getPreapproval(providerSubscriptionId);
-    return synchronizePreapproval(preapproval);
+function subscriptionBlocksCheckout(subscription, now = new Date()) {
+  if (openStatuses.includes(subscription.status)) {
+    return true;
   }
-
-  return subscription;
+  if (
+    subscription.status !== 'cancelled' ||
+    !subscription.cancelAtPeriodEnd ||
+    subscription.lastPaymentStatus !== 'approved'
+  ) {
+    return false;
+  }
+  const periodEnd = subscription.currentPeriodEnd
+    ? new Date(subscription.currentPeriodEnd)
+    : null;
+  return periodEnd !== null && periodEnd > now;
 }
 
 class SubscriptionController {
-  // Este é o método `checkout` que você deve SUBSTITUIR COMPLETAMENTE
   async checkout(request, response) {
     let data;
     try {
@@ -178,6 +273,25 @@ class SubscriptionController {
       throw error;
     }
 
+    const openSubscriptionQuery = {
+      [Op.or]: [
+        { status: { [Op.in]: openStatuses } },
+        {
+          status: 'cancelled',
+          cancelAtPeriodEnd: true,
+          currentPeriodEnd: { [Op.gt]: new Date() },
+        },
+      ],
+    };
+
+    // Sincroniza com o Mercado Pago antes de bloquear: webhooks podem ter
+    // sido perdidos e o estado local pode estar desatualizado.
+    const subscriptionToSync = await Subscription.findOne({
+      where: { userId: request.user.id, ...openSubscriptionQuery },
+      order: [['createdAt', 'DESC']],
+    });
+    await reconcileWithMercadoPago(subscriptionToSync);
+
     const checkout = await Subscription.sequelize.transaction(
       async (transaction) => {
         const user = await User.findByPk(request.user.id, {
@@ -188,22 +302,38 @@ class SubscriptionController {
           return { userNotFound: true };
         }
 
-        const existingSubscription = await Subscription.findOne({
-          where: {
-            userId: user.id,
-            [Op.or]: [
-              { status: { [Op.in]: openStatuses } },
-              {
-                status: 'cancelled',
-                cancelAtPeriodEnd: true,
-                currentPeriodEnd: { [Op.gt]: new Date() },
-              },
-            ],
-          },
+        let existingSubscription = await Subscription.findOne({
+          where: { userId: user.id, ...openSubscriptionQuery },
+          order: [['createdAt', 'DESC']],
           transaction,
         });
-        if (existingSubscription) {
-          return { conflict: true };
+
+        const orphanThresholdMs = 15 * 60 * 1000;
+        if (
+          existingSubscription?.status === 'pending' &&
+          !existingSubscription.providerSubscriptionId &&
+          Date.now() - new Date(existingSubscription.createdAt).getTime() >
+            orphanThresholdMs
+        ) {
+          // O checkout anterior nunca chegou ao Mercado Pago; descarta o
+          // registro órfão para não bloquear uma nova assinatura.
+          await existingSubscription.update(
+            { status: 'failed' },
+            { transaction },
+          );
+          existingSubscription = null;
+        }
+
+        if (
+          existingSubscription &&
+          subscriptionBlocksCheckout(existingSubscription)
+        ) {
+          return {
+            conflict: true,
+            accessUntil: openStatuses.includes(existingSubscription.status)
+              ? null
+              : existingSubscription.currentPeriodEnd,
+          };
         }
 
         const planDetailsFromService = subscriptionPlans[data.plan]; // Obtém os detalhes do plano
@@ -232,9 +362,10 @@ class SubscriptionController {
     }
 
     if (checkout.conflict) {
-      return response.status(409).json({
-        message: 'Você já possui uma assinatura ativa ou pendente.',
-      });
+      const message = checkout.accessUntil
+        ? `Sua assinatura já está paga e o acesso continua até ${new Date(checkout.accessUntil).toLocaleDateString('pt-BR')}. Quando o período terminar, você poderá assinar novamente.`
+        : 'Você já possui uma assinatura ativa ou pendente.';
+      return response.status(409).json({ message });
     }
 
     const plan = subscriptionPlans[data.plan];
@@ -320,37 +451,29 @@ class SubscriptionController {
     try {
       await cancelPreapproval(subscription.providerSubscriptionId);
       await subscription.update({
-        providerSubscriptionId: mpPreapproval.id,
+        status: 'cancelled',
+        cancelAtPeriodEnd: true,
       });
 
       return response.status(200).json({
-        message: 'Assinatura iniciada com sucesso. Redirecione para o Mercado Pago.',
-        paymentUrl: mpPreapproval.init_point, 
+        id: subscription.id,
+        status: 'cancelled',
+        accessUntil: subscription.currentPeriodEnd,
       });
-
     } catch (error) {
-      console.error('--- ERRO AO CHAMAR createPreapproval do Mercado Pago ---');
-      console.error('Erro:', error); 
-      console.error('----------------------------------------------------');
+      console.error('Mercado Pago subscription cancellation failed:', error);
 
-    
       if (error instanceof MercadoPagoConfigurationError) {
-        return response.status(500).json({
-          message: 'Erro de configuração do Mercado Pago no servidor.',
-          details: error.message,
-        });
-      } else if (error instanceof MercadoPagoApiError) {
-        return response.status(error.status || 500).json({
-          message: `Erro da API do Mercado Pago: ${error.message}`,
-          mpCode: error.providerCode,
-        });
-      } else {
-       
-        return response.status(500).json({
-          message: 'Ocorreu um erro interno inesperado ao processar a assinatura.',
-          details: error.message,
+        return response.status(503).json({
+          message: 'Os pagamentos não estão configurados no servidor.',
         });
       }
+      if (error instanceof MercadoPagoApiError) {
+        return response.status(502).json({
+          message: 'Não foi possível cancelar a assinatura no Mercado Pago.',
+        });
+      }
+      throw error;
     }
   }
 

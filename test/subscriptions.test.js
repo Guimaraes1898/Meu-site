@@ -118,6 +118,56 @@ test('webhook signature rejects invalid or stale signatures', () => {
   );
 });
 
+test('webhook signature accepts manifests with omitted fields', () => {
+  const now = Date.now();
+  const timestamp = Math.floor(now / 1000);
+  const dataId = 'subscription-123';
+  const requestId = 'request-123';
+  const secret = 'webhook-test-secret';
+
+  const withoutDataId = createHmac('sha256', secret)
+    .update(`request-id:${requestId};ts:${timestamp};`)
+    .digest('hex');
+  assert.equal(
+    verifyWebhookSignature({
+      signature: `ts=${timestamp},v1=${withoutDataId}`,
+      requestId,
+      dataId,
+      secret,
+      now,
+    }),
+    true,
+  );
+
+  const withoutRequestId = createHmac('sha256', secret)
+    .update(`id:${dataId};ts:${timestamp};`)
+    .digest('hex');
+  assert.equal(
+    verifyWebhookSignature({
+      signature: `ts=${timestamp},v1=${withoutRequestId}`,
+      requestId,
+      dataId,
+      secret,
+      now,
+    }),
+    true,
+  );
+
+  const tampered = createHmac('sha256', secret)
+    .update(`id:other-id;request-id:${requestId};ts:${timestamp};`)
+    .digest('hex');
+  assert.equal(
+    verifyWebhookSignature({
+      signature: `ts=${timestamp},v1=${tampered}`,
+      requestId,
+      dataId,
+      secret,
+      now,
+    }),
+    false,
+  );
+});
+
 test('checkout creates a Mercado Pago preapproval using the selected plan', async () => {
   const previousFetch = globalThis.fetch;
   const previousAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;

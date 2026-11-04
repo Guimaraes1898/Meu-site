@@ -138,8 +138,25 @@ export async function createPreapproval({ subscriptionId, email, plan }) {
   return result;
 }
 
+export async function getPreapproval(id) {
+  return request(`/preapproval/${encodeURIComponent(id)}`);
+}
+
+export async function cancelPreapproval(id) {
+  return request(`/preapproval/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: { status: 'cancelled' },
+  });
+}
+
 export async function getAuthorizedPayment(id) {
   return request(`/authorized_payments/${encodeURIComponent(id)}`);
+}
+
+export async function searchAuthorizedPayments(preapprovalId) {
+  return request(
+    `/authorized_payments/search?preapproval_id=${encodeURIComponent(preapprovalId)}`,
+  );
 }
 
 export function verifyWebhookSignature({
@@ -188,13 +205,22 @@ export function getWebhookSignatureFailure({
     return 'timestamp_out_of_range';
   }
 
-  const manifest = `id:${dataId.toLowerCase()};request-id:${requestId};ts:${fields.ts};`;
-  const expected = createHmac('sha256', secret).update(manifest).digest();
   const received = Buffer.from(fields.v1, 'hex');
-  if (
-    received.length !== expected.length ||
-    !timingSafeEqual(received, expected)
-  ) {
+  // O Mercado Pago omite do manifest os campos ausentes na notificação
+  // (ex.: subscription_preapproval pode ser assinado sem o data.id), então
+  // validamos contra as variantes documentadas.
+  const manifestCandidates = [
+    `id:${dataId.toLowerCase()};request-id:${requestId};ts:${fields.ts};`,
+    `request-id:${requestId};ts:${fields.ts};`,
+    `id:${dataId.toLowerCase()};ts:${fields.ts};`,
+  ];
+  const matches = manifestCandidates.some((manifest) => {
+    const expected = createHmac('sha256', secret).update(manifest).digest();
+    return (
+      received.length === expected.length && timingSafeEqual(received, expected)
+    );
+  });
+  if (!matches) {
     return 'signature_mismatch';
   }
   return null;

@@ -312,6 +312,9 @@ async function startSubscriptionCheckout() {
     });
     window.location.assign(checkoutUrl);
   } catch (error) {
+    // O checkout pode ter reconciliado o estado da assinatura com o
+    // Mercado Pago; recarrega para refletir o estado real.
+    await loadAccount();
     setAccountMessage(error.message);
   }
 }
