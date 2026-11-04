@@ -3,3 +3,6 @@ packages:
 
 allowBuilds:
   bcrypt: false
+
+overrides:
+  open: 8.4.2
