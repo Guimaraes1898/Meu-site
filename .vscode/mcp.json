@@ -4,7 +4,7 @@
       "type": "http",
       "url": "https://mcp.mercadopago.com/mcp",
       "headers": {
-        "Authorization": "Bearer ${input:APP_USR-7545647754710382-102422-1347e6193797415949466a68643eed47-200321058}"
+        "Authorization": "Bearer ${input:mercadopago-access-token}"
       }
     }
   },
