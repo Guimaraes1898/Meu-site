@@ -1,3 +1,17 @@
+:root {
+	--azul-fundo: #04121f;
+	--azul-card: rgba(8, 38, 58, 0.78);
+	--ciano: #22d3ee;
+	--ciano-hover: #0e9bbd;
+	--ciano-escuro: #0f6c8d;
+	--texto: #e2f3fb;
+	--texto-destaque: #ffd54a;
+	--borda: rgba(34, 211, 238, 0.4);
+	--link: #7dd3fc;
+	--sucesso: #4ade80;
+	--erro: #ff6b5e;
+}
+
 *,
 *::before,
 *::after {
@@ -6,42 +20,55 @@
 
 body {
 	margin: 0;
-	font-family: Arial, sans-serif;
-	background-image: url("background.site.jpg");
-	background-size: cover;
-	background-position: center;
+	font-family: "Inter", "Segoe UI", system-ui, Arial, sans-serif;
+	background:
+		linear-gradient(rgba(4, 18, 31, 0.85), rgba(4, 18, 31, 0.9)),
+		url("background.site.jpg") center / cover fixed;
 	min-height: 100vh;
+	color: var(--texto);
 }
 
-/* NOVO: O .page-wrapper agora funciona como o contêiner mestre para centralizar e limitar a largura */
+:focus-visible {
+	outline: 3px solid var(--texto-destaque);
+	outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		transition-duration: 0.01ms !important;
+	}
+}
+
+
 .page-wrapper {
-	max-width: 900px; /* Largura máxima para TODO o conteúdo principal */
-	margin: 0 auto; /* Centraliza o wrapper na tela */
-	padding: 0 20px; /* Adiciona um padding lateral para telas menores, para o conteúdo não colar nas bordas */
+	max-width: 900px;
+	margin: 0 auto; 
+	padding: 0 20px; 
 }
 
-/* Seletor geral para parágrafos, pode ser sobrescrito por mais específicos */
 p {
-	color: #1d85f5;
+	color: var(--texto);
 }
 
 header {
 	padding: 20px 0;
 	text-align: center;
-	/* max-width e margin: auto não são mais necessários aqui, pois o .page-wrapper já faz isso para o header */
 }
 
 header h1 {
-	color: #23a1f4f4;
+	color: var(--ciano);
 	font-weight: bold;
 	margin-bottom: 5px;
 	padding: 0;
 	font-size: 2.8em;
+	text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
-/* Seletor específico para parágrafos dentro do header */
 header p {
-	color: #c1e813f4;
+	color: var(--texto-destaque);
 	font-size: 1.1em;
 	margin-top: 0;
 	margin-bottom: 25px;
@@ -49,27 +76,29 @@ header p {
 }
 
 .tabs-container {
-	/* max-width e margin: auto não são mais necessários aqui, pois o .page-wrapper já faz isso */
-	background-color: #adfcbd0a; /* Fundo transparente para o contêiner principal */
-	border-radius: 8px;
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-	/* CORREÇÃO AQUI: Padding 0 para o .tabs-container. O espaçamento será dado pelos filhos. */
+	background: var(--azul-card);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	border: 1px solid var(--borda);
+	border-radius: 16px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+
 	padding: 0;
-	margin-bottom: 20px; /* Espaço abaixo do container de abas */
-	min-height: 400px; /* Ajuste este valor após testar a altura da sua aba mais alta */
+	margin-bottom: 20px;
+	min-height: 400px;
 }
 
 .tab-buttons {
 	display: flex;
 	flex-wrap: wrap;
-	border-bottom: 1px solid #53f57381; /* A linha divisória entre botões e conteúdo */
-	/* CORREÇÃO AQUI: Padding para o bloco de botões */
-	padding: 20px 20px 10px 20px; /* padding-top, right, bottom, left. (20px acima, 10px abaixo da linha) */
-	margin-bottom: 0; /* Remove qualquer margem extra que separaria dos conteúdos */
+	border-bottom: 1px solid var(--borda);
+
+	padding: 20px 20px 10px 20px;
+	margin-bottom: 0;
 }
 
 .tab-button {
-	background-color: #53f57381;
+	background-color: rgba(34, 211, 238, 0.12);
 	border: none;
 	outline: none;
 	cursor: pointer;
@@ -77,7 +106,7 @@ header p {
 	transition: all 0.3s ease;
 	font-size: 16px;
 	font-weight: bold;
-	color: #18036b;
+	color: var(--texto);
 	border-top-left-radius: 8px;
 	border-top-right-radius: 8px;
 	margin-right: 5px;
@@ -86,16 +115,16 @@ header p {
 }
 
 .tab-button:hover {
-	background-color: #0c5a0bb0;
-	color: #dce009;
+	background-color: rgba(34, 211, 238, 0.3);
+	color: #ffffff;
 	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tab-button.active {
-	background-color: #0c5a0bb0;
-	color: #dce009;
-	border: 1px solid #080808;
-	border-bottom: 1px solid #0c5a0bb0; /* Borda inferior do botão ativo para "esconder" a linha divisória */
+	background-color: rgba(34, 211, 238, 0.3);
+	color: #ffffff;
+	border: 1px solid var(--borda);
+	border-bottom: 1px solid transparent; /* Borda inferior do botão ativo para "esconder" a linha divisória */
 	box-shadow: 0 0 8px rgba(0, 0, 0, 0.2);
 	z-index: 1;
 	position: relative;
@@ -119,8 +148,8 @@ header p {
 
 /* Estilos para botões primários */
 .primary-button {
-	background-color: #20b5eb;
-	color: #ffffff;
+	background-color: var(--ciano);
+	color: #06222e;
 	padding: 12px 25px;
 	border: none;
 	border-radius: 8px;
@@ -138,22 +167,30 @@ header p {
 }
 
 .primary-button:hover {
-	background-color: #178ab3;
+	background-color: var(--ciano-hover);
+	color: #ffffff;
 	transform: translateY(-2px);
 	box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
 }
 
 .primary-button:active {
-	background-color: #0f6c8d;
+	background-color: var(--ciano-escuro);
+	color: #ffffff;
 	transform: translateY(0);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Estilos para o botão de upload de foto */
+.primary-button:disabled {
+	opacity: 0.6;
+	cursor: wait;
+	transform: none;
+}
+
+
 .envieafoto label {
 	display: inline-block;
-	background-color: #20b5eb;
-	color: #ffffff;
+	background-color: var(--ciano);
+	color: #06222e;
 	padding: 12px 25px;
 	border-radius: 8px;
 	cursor: pointer;
@@ -181,7 +218,7 @@ header p {
 }
 
 .tab-content h2 {
-	color: #cfe813f4;
+	color: var(--texto-destaque);
 	margin-bottom: 15px;
 }
 
@@ -193,45 +230,54 @@ header p {
 }
 
 .envieafoto label:hover {
-	background-color: #178ab3;
+	background-color: var(--ciano-hover);
+	color: #ffffff;
 	transform: translateY(-2px);
 	box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
 }
 
 .envieafoto label:active {
-	background-color: #0f6c8d;
+	background-color: var(--ciano-escuro);
+	color: #ffffff;
 	transform: translateY(0);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tab-content h3 {
-	color: #cfe813f4;
-	font-size: 2em;
+	color: var(--texto-destaque);
+	font-size: 1.5em;
 }
 
 .tab-content h4 {
-	color: #cfe813f4;
-	font-size: 2em;
+	color: var(--texto-destaque);
+	font-size: 1.3em;
 }
 
-/* Estilos de labels dentro do conteúdo da aba */
+
 .tab-content label {
 	display: block;
 	margin-bottom: 10px;
 	font-weight: bold;
-	color: #d7e42a;
+	color: var(--texto);
 }
 
-/* Estilos de inputs de texto/número dentro do conteúdo da aba */
+
 .tab-content input[type="text"],
 .tab-content input[type="number"] {
-	width: calc(100% - 20px); /* Ajuste para caber dentro do padding do pai */
+	width: 100%;
 	padding: 10px;
 	margin-bottom: 15px;
-	border: 3px solid #20b5eb;
-	border-radius: 5px;
+	border: 2px solid var(--borda);
+	border-radius: 8px;
 	background-color: #ffffff;
 	color: #10100f;
+}
+
+.tab-content input[type="text"]:focus,
+.tab-content input[type="number"]:focus {
+	border-color: var(--ciano);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.25);
 }
 
 .conta-section {
@@ -239,16 +285,18 @@ header p {
 	width: 100%;
 	max-width: 100%;
 	margin: 12px 0 20px;
-	padding: 12px 16px;
-	border: 3px solid #20b5eb;
-	border-radius: 5px;
-	background-color: #dfe22512;
-	color: #e7eb0e;
+	padding: 16px 20px;
+	border: 1px solid var(--borda);
+	border-radius: 16px;
+	background: var(--azul-card);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+	color: var(--texto);
 }
 
 .page-wrapper .conta-section h2,
 .page-wrapper .conta-section h3 {
-	color: #cfe813f4;
+	color: var(--texto-destaque);
 }
 
 .page-wrapper .conta-section h2 {
@@ -279,10 +327,10 @@ header p {
 
 .conta-acao {
 	padding: 4px 8px;
-	border: 1px solid #20b5eb;
+	border: 1px solid var(--borda);
 	border-radius: 4px;
 	background: transparent;
-	color: #e7eb0e;
+	color: var(--texto);
 	font: inherit;
 	font-weight: bold;
 	cursor: pointer;
@@ -290,8 +338,8 @@ header p {
 
 .conta-acao.active,
 .conta-acao:hover {
-	background: #20b5eb;
-	color: #fff;
+	background: var(--ciano);
+	color: #06222e;
 }
 
 .conta-formularios {
@@ -333,10 +381,17 @@ header p {
 	width: 100%;
 	margin-bottom: 8px;
 	padding: 8px;
-	border: 2px solid #20b5eb;
-	border-radius: 5px;
+	border: 2px solid var(--borda);
+	border-radius: 8px;
 	background-color: #fff;
 	color: #10100f;
+}
+
+.conta-section input:focus,
+.conta-section select:focus {
+	border-color: var(--ciano);
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.25);
 }
 
 .cadastro-campo label {
@@ -366,9 +421,17 @@ header p {
 
 .conta-mensagem[data-type="success"] {
 	padding: 12px;
-	border: 1px solid #2ecc71;
+	border: 1px solid var(--sucesso);
 	border-radius: 6px;
 	background: #14532d;
+	color: #fff;
+}
+
+.conta-mensagem[data-type="error"] {
+	padding: 12px;
+	border: 1px solid var(--erro);
+	border-radius: 6px;
+	background: #3b1010;
 	color: #fff;
 }
 
@@ -383,7 +446,7 @@ header p {
 	gap: 18px;
 	padding: 22px 24px;
 	border: 3px solid #ffb4ab;
-	border-left: 8px solid #ff453a;
+	border-left: 8px solid var(--erro);
 	border-radius: 14px;
 	background: #3b1010;
 	box-shadow: 0 16px 48px rgb(0 0 0 / 65%);
@@ -393,6 +456,18 @@ header p {
 	line-height: 1.45;
 	transform: translate(-50%, -50%);
 	animation: notification-enter 180ms ease-out;
+}
+
+.notification-toast[data-type="success"]:not([hidden]) {
+	border-color: #86efac;
+	border-left-color: var(--sucesso);
+	background: #0a2e1a;
+}
+
+.notification-toast[data-type="info"]:not([hidden]) {
+	border-color: #7dd3fc;
+	border-left-color: var(--ciano);
+	background: #0a2436;
 }
 
 .notification-toast-message {
@@ -420,11 +495,11 @@ header p {
 	}
 }
 
-/* Estilos de parágrafos dentro do conteúdo da aba */
+
 .tab-content p {
 	margin-bottom: 10px;
 	line-height: 1.5;
-	color: #10cbe8;
+	color: var(--texto);
 }
 
 .privacy-notice {
@@ -444,10 +519,10 @@ header p {
 }
 
 .cuidados-fontes a {
-	color: #8be4ff;
+	color: var(--link);
 }
 
-/* Seções internas das abas */
+
 .envieafoto,
 .descricao,
 .litros,
@@ -456,10 +531,10 @@ header p {
 	display: block;
 	padding: 20px;
 	margin-bottom: 20px;
-	border: 3px solid #20b5eb;
-	border-radius: 5px;
-	background-color: #dfe22506;
-	color: #e7eb0e;
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+	background: rgba(8, 38, 58, 0.55);
+	color: var(--texto);
 }
 
 .planejador-peixes {
@@ -475,7 +550,7 @@ header p {
 
 .planejador-resultado {
 	margin-top: 16px;
-	color: #e7eb0e;
+	color: var(--texto);
 	white-space: pre-wrap;
 	line-height: 1.6;
 }
@@ -486,7 +561,7 @@ header p {
 
 .lojas-resultados {
 	padding-left: 24px;
-	color: #e7eb0e;
+	color: var(--texto);
 }
 
 .lojas-resultados li {
@@ -498,7 +573,7 @@ header p {
 }
 
 .lojas-resultados a {
-	color: #8be4ff;
+	color: var(--link);
 }
 
 .lojas-status {
@@ -506,15 +581,15 @@ header p {
 }
 
 .lojas-credito {
-	color: #e7eb0e;
+	color: var(--texto);
 }
 
 .litros input {
 	margin-right: 10px;
-	width: calc(33% - 20px);
+	width: calc(33.33% - 10px);
 }
 
-/* Estilos para imagens responsivas */
+
 .tab-content img {
 	max-width: 100%;
 	height: auto;
@@ -525,27 +600,34 @@ header p {
 }
 
 @media (max-width: 768px) {
-	/* Ajusta o padding do wrapper principal em telas menores */
+	
 	.page-wrapper {
-		padding: 0 10px; /* Menos padding nas laterais em telas pequenas */
+		padding: 0 10px; 
 	}
 	header {
 		padding-left: 10px;
 		padding-right: 10px;
 	}
 	.tab-buttons {
-		padding: 20px 10px 10px 10px; /* Ajusta padding lateral para mobile */
+		padding: 20px 10px 10px 10px; 
 	}
 	.tab-button {
 		padding: 10px 15px;
 		font-size: 14px;
 	}
 	.litros input {
-		width: calc(100% - 20px);
+		width: 100%;
 		margin-right: 0;
 	}
+	.tab-buttons {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+	}
+	.tab-button {
+		white-space: nowrap;
+	}
 	.tab-content {
-		padding: 10px 10px 20px 10px; /* Ajusta padding lateral para mobile */
+		padding: 10px 10px 20px 10px; 
 	}
 	.conta-formularios #registerForm {
 		grid-template-columns: 1fr;
@@ -564,6 +646,20 @@ header p {
 }
 span.litros-resultado {
 	font-weight: bold;
-	color: #c7e41e;
+	color: var(--texto-destaque);
 	font-size: 2em;
+}
+
+.site-footer {
+	margin-top: 40px;
+	padding: 24px 0 32px;
+	text-align: center;
+	color: var(--texto);
+	font-size: 0.9em;
+	line-height: 1.6;
+	opacity: 0.85;
+}
+
+.site-footer p {
+	margin: 4px 0;
 }
