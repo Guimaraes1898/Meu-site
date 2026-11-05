@@ -22,7 +22,7 @@ body {
 	margin: 0;
 	font-family: "Inter", "Segoe UI", system-ui, Arial, sans-serif;
 	background:
-		linear-gradient(rgba(4, 18, 31, 0.85), rgba(4, 18, 31, 0.9)),
+		linear-gradient(rgba(4, 18, 31, 0.62), rgba(4, 18, 31, 0.72)),
 		url("background.site.jpg") center / cover fixed;
 	min-height: 100vh;
 	color: var(--texto);
