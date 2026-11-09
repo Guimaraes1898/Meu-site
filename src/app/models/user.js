@@ -19,6 +19,11 @@ class User extends Model {
           allowNull: false,
           unique: true,
         },
+        cpf: {
+          type: DataTypes.STRING(11),
+          allowNull: true,
+          unique: true,
+        },
         password_hash: {
           type: DataTypes.STRING,
           allowNull: false,

@@ -3,14 +3,12 @@ import * as yup from 'yup';
 import Subscription from '../models/subscription.js';
 import User from '../models/user.js';
 import {
-  cancelPreapproval,
-  createPreapproval,
-  getAuthorizedPayment,
-  getPreapproval,
+  cancelPayment,
+  createPixPayment,
+  getPayment,
   getWebhookSignatureFailure,
   MercadoPagoApiError,
   MercadoPagoConfigurationError,
-  searchAuthorizedPayments,
 } from '../services/MercadoPagoService.js';
 import { subscriptionPlans } from '../services/subscriptionPlans.js';
 
@@ -18,7 +16,7 @@ const checkoutSchema = yup.object({
   plan: yup.string().oneOf(Object.keys(subscriptionPlans)).required(),
 });
 
-const openStatuses = ['pending', 'authorized', 'paused'];
+const openStatuses = ['pending', 'authorized'];
 
 function toDate(value) {
   if (typeof value !== 'string') {
@@ -28,171 +26,62 @@ function toDate(value) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function normalizeSubscriptionStatus(status) {
-  const statuses = {
-    authorized: 'authorized',
-    pending: 'pending',
-    paused: 'paused',
-    cancelled: 'cancelled',
-    rejected: 'rejected',
-    expired: 'expired',
-    finished: 'expired',
-  };
-  const normalized = statuses[status];
+function addMonths(date, months) {
+  const result = new Date(date);
+  result.setMonth(result.getMonth() + months);
+  return result;
+}
+
+// O status local 'authorized' significa "pago, com acesso vigente"; o
+// Mercado Pago usa 'approved' para o pagamento Pix em si.
+const subscriptionStatusByPaymentStatus = {
+  approved: 'authorized',
+  pending: 'pending',
+  in_process: 'pending',
+  rejected: 'rejected',
+  cancelled: 'cancelled',
+  refunded: 'cancelled',
+  charged_back: 'cancelled',
+};
+
+function normalizePaymentStatus(status) {
+  const normalized = subscriptionStatusByPaymentStatus[status];
   if (!normalized) {
-    throw new Error(`Unsupported Mercado Pago subscription status: ${status}`);
+    throw new Error(`Unsupported Mercado Pago payment status: ${status}`);
   }
   return normalized;
 }
 
-async function findSubscription(resource) {
+async function findSubscriptionByPayment(payment) {
   if (
-    typeof resource.external_reference === 'string' &&
+    typeof payment.external_reference === 'string' &&
     /^[\da-f]{8}-([\da-f]{4}-){3}[\da-f]{12}$/i.test(
-      resource.external_reference,
+      payment.external_reference,
     )
   ) {
-    const byReference = await Subscription.findByPk(
-      resource.external_reference,
-    );
+    const byReference = await Subscription.findByPk(payment.external_reference);
     if (byReference) {
       return byReference;
     }
   }
 
-  if (resource.id) {
+  if (payment.id) {
     return Subscription.findOne({
-      where: { providerSubscriptionId: String(resource.id) },
+      where: { providerPaymentId: String(payment.id) },
     });
   }
 
   return null;
 }
 
-async function synchronizePreapproval(resource) {
+async function synchronizePayment(payment) {
   if (
-    (typeof resource.id !== 'string' && typeof resource.id !== 'number') ||
-    !resource.status
+    (typeof payment.id !== 'string' && typeof payment.id !== 'number') ||
+    !payment.status
   ) {
-    throw new Error('Mercado Pago returned an incomplete subscription.');
+    throw new Error('Mercado Pago returned an incomplete payment.');
   }
-  const subscription = await findSubscription(resource);
-  if (!subscription) {
-    console.warn(
-      'Received Mercado Pago subscription notification without a matching local subscription.',
-    );
-    return null;
-  }
-
-  const providerId = String(resource.id);
-  if (
-    subscription.providerSubscriptionId &&
-    subscription.providerSubscriptionId !== providerId
-  ) {
-    throw new Error(
-      'Mercado Pago subscription ID does not match local record.',
-    );
-  }
-
-  const status = normalizeSubscriptionStatus(resource.status);
-  const currentPeriodEnd = toDate(
-    resource.next_payment_date ?? resource.auto_recurring?.end_date,
-  );
-  const values = {
-    providerSubscriptionId: providerId,
-    status,
-    cancelAtPeriodEnd: status === 'cancelled' || subscription.cancelAtPeriodEnd,
-  };
-  if (currentPeriodEnd) {
-    values.currentPeriodEnd = currentPeriodEnd;
-  }
-  await subscription.update(values);
-  return subscription;
-}
-
-const paymentStatuses = [
-  'approved',
-  'pending',
-  'rejected',
-  'cancelled',
-  'refunded',
-  'charged_back',
-];
-const installmentStatuses = [
-  'processed',
-  'pending',
-  'waiting for gateway',
-  'recycling',
-];
-
-// A parcela (authorized payment) tem status próprio no nível superior
-// ('processed', 'recycling', ...) e o status real do pagamento fica em
-// `payment.status`. Uma parcela 'processed' pode ter pagamento aprovado ou
-// recusado, então só o status aninhado define o último pagamento.
-function resolveAuthorizedPaymentStatus(authorizedPayment) {
-  const nestedStatus = authorizedPayment.payment?.status;
-  if (typeof nestedStatus === 'string') {
-    if (!paymentStatuses.includes(nestedStatus)) {
-      throw new Error(
-        `Unsupported Mercado Pago payment status: ${nestedStatus}`,
-      );
-    }
-    return nestedStatus;
-  }
-
-  const { status } = authorizedPayment;
-  if (typeof status === 'string' && paymentStatuses.includes(status)) {
-    return status;
-  }
-  if (typeof status === 'string' && installmentStatuses.includes(status)) {
-    return null;
-  }
-  throw new Error(
-    `Unsupported Mercado Pago authorized payment status: ${status}`,
-  );
-}
-
-async function applyAuthorizedPayment(subscription, authorizedPayment) {
-  const status = resolveAuthorizedPaymentStatus(authorizedPayment);
-  const paymentDate = toDate(
-    authorizedPayment.date_created ?? authorizedPayment.debit_date,
-  );
-  const values = {};
-  if (status) {
-    values.lastPaymentStatus = status;
-  }
-  if (paymentDate) {
-    values.lastPaymentAt = paymentDate;
-  }
-  if (Object.keys(values).length > 0) {
-    await subscription.update(values);
-  }
-
-  if (status === 'approved') {
-    const preapproval = await getPreapproval(
-      subscription.providerSubscriptionId,
-    );
-    return synchronizePreapproval(preapproval);
-  }
-
-  return subscription;
-}
-
-async function synchronizeAuthorizedPayment(paymentId) {
-  const authorizedPayment = await getAuthorizedPayment(paymentId);
-  if (
-    typeof authorizedPayment.preapproval_id !== 'string' &&
-    typeof authorizedPayment.preapproval_id !== 'number'
-  ) {
-    throw new Error(
-      'Mercado Pago authorized payment has no associated subscription.',
-    );
-  }
-
-  const providerSubscriptionId = String(authorizedPayment.preapproval_id);
-  const subscription = await Subscription.findOne({
-    where: { providerSubscriptionId },
-  });
+  const subscription = await findSubscriptionByPayment(payment);
   if (!subscription) {
     console.warn(
       'Received Mercado Pago payment notification without a matching local subscription.',
@@ -200,60 +89,72 @@ async function synchronizeAuthorizedPayment(paymentId) {
     return null;
   }
 
-  return applyAuthorizedPayment(subscription, authorizedPayment);
+  const providerId = String(payment.id);
+  if (
+    subscription.providerPaymentId &&
+    subscription.providerPaymentId !== providerId
+  ) {
+    throw new Error('Mercado Pago payment ID does not match local record.');
+  }
+
+  const status = normalizePaymentStatus(payment.status);
+  const paymentDate = toDate(payment.date_approved ?? payment.date_created);
+  const values = {
+    providerPaymentId: providerId,
+    status,
+    lastPaymentStatus: payment.status,
+  };
+  if (paymentDate) {
+    values.lastPaymentAt = paymentDate;
+  }
+  if (status === 'authorized') {
+    // O acesso passa a valer na aprovação do Pix e dura o período do plano.
+    const plan = subscriptionPlans[subscription.plan];
+    values.currentPeriodEnd = addMonths(
+      paymentDate ?? new Date(),
+      plan?.frequency ?? 1,
+    );
+  }
+  await subscription.update(values);
+  return subscription;
 }
 
 // Busca o estado real no Mercado Pago para corrigir o registro local quando
 // algum webhook foi perdido ou rejeitado.
 async function reconcileWithMercadoPago(subscription) {
-  if (!subscription?.providerSubscriptionId) {
+  if (!subscription?.providerPaymentId) {
     return;
   }
   try {
-    const preapproval = await getPreapproval(
-      subscription.providerSubscriptionId,
-    );
-    await synchronizePreapproval(preapproval);
-
-    const result = await searchAuthorizedPayments(
-      subscription.providerSubscriptionId,
-    );
-    const payments = Array.isArray(result?.results) ? result.results : [];
-    if (payments.length > 0) {
-      const latest = payments.reduce((previous, current) => {
-        const previousDate = toDate(previous?.date_created);
-        const currentDate = toDate(current?.date_created);
-        if (!previousDate) {
-          return current;
-        }
-        if (!currentDate) {
-          return previous;
-        }
-        return previousDate >= currentDate ? previous : current;
-      });
-      await subscription.reload();
-      await applyAuthorizedPayment(subscription, latest);
-    }
+    const payment = await getPayment(subscription.providerPaymentId);
+    await synchronizePayment(payment);
   } catch (error) {
     console.error('Failed to reconcile subscription with Mercado Pago:', error);
   }
 }
 
 function subscriptionBlocksCheckout(subscription, now = new Date()) {
-  if (openStatuses.includes(subscription.status)) {
-    return true;
+  if (subscription.status === 'pending') {
+    // Um Pix vencido sem pagamento não bloqueia um novo checkout.
+    const expiresAt = subscription.pixExpiresAt
+      ? new Date(subscription.pixExpiresAt)
+      : null;
+    return !expiresAt || expiresAt > now;
   }
-  if (
-    subscription.status !== 'cancelled' ||
-    !subscription.cancelAtPeriodEnd ||
-    subscription.lastPaymentStatus !== 'approved'
-  ) {
-    return false;
+  if (subscription.status === 'authorized') {
+    // Após o fim do período pago o usuário pode renovar com um novo Pix.
+    const periodEnd = subscription.currentPeriodEnd
+      ? new Date(subscription.currentPeriodEnd)
+      : null;
+    return !periodEnd || periodEnd > now;
   }
-  const periodEnd = subscription.currentPeriodEnd
-    ? new Date(subscription.currentPeriodEnd)
-    : null;
-  return periodEnd !== null && periodEnd > now;
+  return (
+    subscription.status === 'cancelled' &&
+    subscription.cancelAtPeriodEnd &&
+    subscription.lastPaymentStatus === 'approved' &&
+    subscription.currentPeriodEnd !== null &&
+    new Date(subscription.currentPeriodEnd) > now
+  );
 }
 
 class SubscriptionController {
@@ -287,7 +188,11 @@ class SubscriptionController {
     // Sincroniza com o Mercado Pago antes de bloquear: webhooks podem ter
     // sido perdidos e o estado local pode estar desatualizado.
     const subscriptionToSync = await Subscription.findOne({
-      where: { userId: request.user.id, ...openSubscriptionQuery },
+      where: {
+        userId: request.user.id,
+        status: 'pending',
+        providerPaymentId: { [Op.ne]: null },
+      },
       order: [['createdAt', 'DESC']],
     });
     await reconcileWithMercadoPago(subscriptionToSync);
@@ -311,7 +216,7 @@ class SubscriptionController {
         const orphanThresholdMs = 15 * 60 * 1000;
         if (
           existingSubscription?.status === 'pending' &&
-          !existingSubscription.providerSubscriptionId &&
+          !existingSubscription.providerPaymentId &&
           Date.now() - new Date(existingSubscription.createdAt).getTime() >
             orphanThresholdMs
         ) {
@@ -325,14 +230,28 @@ class SubscriptionController {
         }
 
         if (
+          existingSubscription?.status === 'pending' &&
+          existingSubscription.pixExpiresAt &&
+          new Date(existingSubscription.pixExpiresAt) <= new Date()
+        ) {
+          // O Pix venceu sem pagamento; libera o usuário para gerar outro.
+          await existingSubscription.update(
+            { status: 'expired' },
+            { transaction },
+          );
+          existingSubscription = null;
+        }
+
+        if (
           existingSubscription &&
           subscriptionBlocksCheckout(existingSubscription)
         ) {
           return {
             conflict: true,
-            accessUntil: openStatuses.includes(existingSubscription.status)
-              ? null
-              : existingSubscription.currentPeriodEnd,
+            accessUntil:
+              existingSubscription.status === 'pending'
+                ? null
+                : existingSubscription.currentPeriodEnd,
           };
         }
 
@@ -364,7 +283,7 @@ class SubscriptionController {
     if (checkout.conflict) {
       const message = checkout.accessUntil
         ? `Sua assinatura já está paga e o acesso continua até ${new Date(checkout.accessUntil).toLocaleDateString('pt-BR')}. Quando o período terminar, você poderá assinar novamente.`
-        : 'Você já possui uma assinatura ativa ou pendente.';
+        : 'Você já possui um pagamento Pix pendente. Conclua o pagamento ou cancele-o para gerar um novo.';
       return response.status(409).json({ message });
     }
 
@@ -372,20 +291,27 @@ class SubscriptionController {
     const { subscription, user } = checkout;
 
     try {
-      const preapproval = await createPreapproval({
+      const payment = await createPixPayment({
         subscriptionId: subscription.id,
-        email: user.email,
+        user,
         plan,
       });
       await subscription.update({
-        providerSubscriptionId: preapproval.id,
-        currentPeriodEnd: toDate(preapproval.next_payment_date),
+        providerPaymentId: String(payment.id),
+        pixQrCode: payment.qrCode,
+        pixQrCodeBase64: payment.qrCodeBase64,
+        pixExpiresAt: toDate(payment.expiresAt),
       });
       return response.status(201).json({
         id: subscription.id,
         plan: data.plan,
         status: 'pending',
-        checkoutUrl: preapproval.init_point,
+        pix: {
+          qrCode: payment.qrCode,
+          qrCodeBase64: payment.qrCodeBase64,
+          ticketUrl: payment.ticketUrl,
+          expiresAt: payment.expiresAt,
+        },
       });
     } catch (error) {
       await subscription.update({ status: 'failed' });
@@ -395,9 +321,9 @@ class SubscriptionController {
         });
       }
       if (error instanceof MercadoPagoApiError) {
-        console.error('Mercado Pago subscription creation failed:', error);
+        console.error('Mercado Pago Pix payment creation failed:', error);
         return response.status(502).json({
-          message: 'Não foi possível iniciar a assinatura no Mercado Pago.',
+          message: 'Não foi possível gerar o pagamento Pix no Mercado Pago.',
         });
       }
       throw error;
@@ -424,6 +350,14 @@ class SubscriptionController {
         currentPeriodEnd: subscription.currentPeriodEnd,
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         lastPaymentStatus: subscription.lastPaymentStatus,
+        pix:
+          subscription.status === 'pending' && subscription.pixQrCode
+            ? {
+                qrCode: subscription.pixQrCode,
+                qrCodeBase64: subscription.pixQrCodeBase64,
+                expiresAt: subscription.pixExpiresAt,
+              }
+            : null,
       },
     });
   }
@@ -432,36 +366,45 @@ class SubscriptionController {
     const subscription = await Subscription.findOne({
       where: {
         userId: request.user.id,
-        status: { [Op.in]: ['pending', 'authorized', 'paused'] },
+        status: 'pending',
       },
       order: [['createdAt', 'DESC']],
     });
 
     if (!subscription) {
       return response.status(404).json({
-        message: 'Não há uma assinatura ativa para cancelar.',
+        message: 'Não há um pagamento Pix pendente para cancelar.',
       });
     }
-    if (!subscription.providerSubscriptionId) {
+
+    if (!subscription.providerPaymentId) {
+      // O pagamento nunca chegou ao Mercado Pago; basta descartar o registro.
+      await subscription.update({ status: 'cancelled' });
+      return response.status(200).json({
+        id: subscription.id,
+        status: 'cancelled',
+      });
+    }
+
+    // Garante que o Pix não foi pago enquanto algum webhook se perdeu.
+    await reconcileWithMercadoPago(subscription);
+    await subscription.reload();
+    if (subscription.status !== 'pending') {
       return response.status(409).json({
-        message: 'A assinatura ainda não foi criada no Mercado Pago.',
+        message: 'Este pagamento já foi processado e não pode ser cancelado.',
       });
     }
 
     try {
-      await cancelPreapproval(subscription.providerSubscriptionId);
-      await subscription.update({
-        status: 'cancelled',
-        cancelAtPeriodEnd: true,
-      });
+      await cancelPayment(subscription.providerPaymentId);
+      await subscription.update({ status: 'cancelled' });
 
       return response.status(200).json({
         id: subscription.id,
         status: 'cancelled',
-        accessUntil: subscription.currentPeriodEnd,
       });
     } catch (error) {
-      console.error('Mercado Pago subscription cancellation failed:', error);
+      console.error('Mercado Pago Pix payment cancellation failed:', error);
 
       if (error instanceof MercadoPagoConfigurationError) {
         return response.status(503).json({
@@ -470,7 +413,7 @@ class SubscriptionController {
       }
       if (error instanceof MercadoPagoApiError) {
         return response.status(502).json({
-          message: 'Não foi possível cancelar a assinatura no Mercado Pago.',
+          message: 'Não foi possível cancelar o pagamento Pix no Mercado Pago.',
         });
       }
       throw error;
@@ -479,106 +422,86 @@ class SubscriptionController {
 
 
   async webhook(request, response) {
-  console.log('--- Webhook do Mercado Pago recebido! ---'); // <-- NOVO LOG
-  console.log('Request Headers:', request.headers); // <-- NOVO LOG
-  console.log('Request Query:', request.query);   // <-- NOVO LOG
-  console.log('Request Body:', JSON.stringify(request.body, null, 2)); // <-- NOVO LOG
+    const isEmptyProbe =
+      request.body &&
+      typeof request.body === 'object' &&
+      !Array.isArray(request.body) &&
+      Object.keys(request.body).length === 0 &&
+      !request.query['data.id'] &&
+      !request.query.type &&
+      !request.query.topic;
+    if (isEmptyProbe) {
+      return response.status(200).json({ received: true });
+    }
 
-  const isEmptyProbe =
-    request.body &&
-    typeof request.body === 'object' &&
-    !Array.isArray(request.body) &&
-    Object.keys(request.body).length === 0 &&
-    !request.query['data.id'] &&
-    !request.query.type &&
-    !request.query.topic;
-  if (isEmptyProbe) {
-    console.log('Webhook é uma requisição de probe vazia.'); // <-- NOVO LOG
+    const dataId = String(
+      request.body?.data?.id ??
+        request.query['data.id'] ??
+        request.query.id ??
+        '',
+    );
+    const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+    if (!secret) {
+      console.error('MERCADO_PAGO_WEBHOOK_SECRET não configurado.');
+      return response.status(503).json({
+        message: 'As notificações do Mercado Pago não estão configuradas.',
+      });
+    }
+
+    const signatureFailure = getWebhookSignatureFailure({
+      signature: request.get('x-signature'),
+      requestId: request.get('x-request-id'),
+      dataId,
+      secret,
+    });
+
+    if (signatureFailure) {
+      console.warn('Mercado Pago webhook signature validation failed:', {
+        reason: signatureFailure,
+        dataIdSource: request.body?.data?.id ? 'body' : 'query',
+        notificationType:
+          request.body?.type ??
+          request.query.type ??
+          request.query.topic ??
+          null,
+      });
+      return response.status(401).json({
+        message: 'Assinatura de notificação inválida.',
+      });
+    }
+
+    const notificationType =
+      request.body?.type ?? request.query.type ?? request.query.topic;
+
+    try {
+      if (notificationType === 'payment') {
+        const payment = await getPayment(dataId);
+        await synchronizePayment(payment);
+      } else {
+        console.warn(
+          'Ignoring unsupported Mercado Pago notification type:',
+          notificationType,
+        );
+      }
+    } catch (error) {
+      if (error instanceof MercadoPagoConfigurationError) {
+        console.error('Mercado Pago webhook processing failed:', error);
+        return response.status(503).json({
+          message: 'Os pagamentos não estão configurados no servidor.',
+        });
+      }
+      if (error instanceof MercadoPagoApiError) {
+        console.error('Mercado Pago webhook processing failed:', error);
+        return response.status(error.status || 502).json({
+          message: 'Não foi possível processar a notificação do Mercado Pago.',
+        });
+      }
+      console.error('Mercado Pago webhook processing failed:', error);
+      throw error;
+    }
+
     return response.status(200).json({ received: true });
   }
-
-  const dataId = String(
-    request.body?.data?.id ?? request.query['data.id'] ?? '',
-  );
-  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
-  if (!secret) {
-    console.error('ERRO: MERCADO_PAGO_WEBHOOK_SECRET não configurado.'); // <-- NOVO LOG
-    return response.status(503).json({
-      message: 'As notificações do Mercado Pago não estão configuradas.',
-    });
-  }
-  console.log('Webhook dataId:', dataId); // <-- NOVO LOG
-  console.log('Webhook secret (primeiros 5 chars):', secret.substring(0, 5) + '...'); // <-- NOVO LOG
-
-  const signatureFailure = getWebhookSignatureFailure({
-    signature: request.get('x-signature'),
-    requestId: request.get('x-request-id'),
-    dataId,
-    secret,
-  });
-
-  if (signatureFailure) {
-    console.warn('Mercado Pago webhook signature validation failed:', {
-      reason: signatureFailure,
-      dataIdSource: request.query['data.id'] ? 'query' : 'body',
-      notificationType:
-        request.body?.type ?? request.query.type ?? request.query.topic ?? null,
-    });
-    return response.status(401).json({
-      message: 'Assinatura de notificação inválida.',
-    });
-  }
-  console.log('Webhook signature validated successfully!'); // <-- NOVO LOG
-
-  const notificationType =
-    request.body?.type ?? request.query.type ?? request.query.topic;
-  console.log('Webhook notificationType:', notificationType); // <-- NOVO LOG
-
-  try {
-    if (
-      notificationType === 'subscription_preapproval' ||
-      notificationType === 'preapproval'
-    ) {
-      console.log('Processing preapproval notification...'); // <-- NOVO LOG
-      const preapproval = await getPreapproval(dataId);
-      console.log('Preapproval fetched from MP:', JSON.stringify(preapproval, null, 2)); // <-- NOVO LOG
-      await synchronizePreapproval(preapproval);
-      console.log('Preapproval synchronized successfully!'); // <-- NOVO LOG
-    } else if (
-      notificationType === 'subscription_authorized_payment' ||
-      notificationType === 'authorized_payment'
-    ) {
-      console.log('Processing authorized payment notification...'); // <-- NOVO LOG
-      const payment = await getAuthorizedPayment(dataId); // <-- Precisamos dessa variável 'payment'
-      console.log('Payment fetched from MP:', JSON.stringify(payment, null, 2)); // <-- NOVO LOG
-      await synchronizeAuthorizedPayment(dataId); // <-- Este aqui precisa do 'payment.preapproval_id' ou similar
-      console.log('Authorized payment synchronized successfully!'); // <-- NOVO LOG
-    } else {
-      console.warn(
-        'Ignoring unsupported Mercado Pago notification type:',
-        notificationType,
-      );
-    }
-  } catch (error) {
-    if (error instanceof MercadoPagoConfigurationError) {
-      console.error('Mercado Pago webhook processing failed (Configuration Error):', error); // <-- NOVO LOG
-      return response.status(503).json({
-        message: 'Os pagamentos não estão configurados no servidor.',
-      });
-    }
-    if (error instanceof MercadoPagoApiError) {
-      console.error('Mercado Pago webhook processing failed (API Error):', error); // <-- NOVO LOG
-      return response.status(error.status || 502).json({ // Use error.status se disponível
-        message: 'Não foi possível processar a notificação do Mercado Pago.',
-      });
-    }
-    console.error('Mercado Pago webhook processing failed (Unhandled Error):', error); // <-- NOVO LOG
-    throw error;
-  }
-
-  console.log('Webhook processed successfully, sending 200 OK.'); // <-- NOVO LOG
-  return response.status(200).json({ received: true });
-}
 }
 
 export default new SubscriptionController();

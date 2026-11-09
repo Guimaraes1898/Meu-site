@@ -33,12 +33,45 @@ test('user registration explains which fields are invalid', async () => {
     errors: [
       { field: 'name', message: 'O nome é obrigatório.' },
       { field: 'email', message: 'Informe um endereço de e-mail válido.' },
+      { field: 'cpf', message: 'O CPF é obrigatório.' },
       {
         field: 'password',
         message: 'A senha deve ter pelo menos 8 caracteres.',
       },
     ],
   });
+});
+
+test('user registration rejects invalid CPF', async () => {
+  let statusCode;
+  let responseBody;
+  const response = {
+    status(code) {
+      statusCode = code;
+      return this;
+    },
+    json(body) {
+      responseBody = body;
+      return this;
+    },
+  };
+
+  await UserController.store(
+    {
+      body: {
+        name: 'Example User',
+        email: 'example@example.com',
+        cpf: '111.111.111-11',
+        password: 'password123',
+      },
+    },
+    response,
+  );
+
+  assert.equal(statusCode, 400);
+  assert.deepEqual(responseBody.errors, [
+    { field: 'cpf', message: 'Informe um CPF válido.' },
+  ]);
 });
 
 test('user registration rejects passwords longer than bcrypt supports', async () => {
@@ -58,6 +91,7 @@ test('user registration rejects passwords longer than bcrypt supports', async ()
       body: {
         name: 'Example User',
         email: 'example@example.com',
+        cpf: '529.982.247-25',
         password: 'a'.repeat(73),
       },
     },

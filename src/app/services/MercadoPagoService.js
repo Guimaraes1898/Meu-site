@@ -81,82 +81,67 @@ async function request(path, { method = 'GET', body, idempotencyKey } = {}) {
   return data;
 }
 
-export async function createPreapproval({ subscriptionId, email, plan }) {
-  const backUrl = process.env.MERCADO_PAGO_BACK_URL;
-  if (!backUrl) {
-    throw new MercadoPagoConfigurationError(
-      'MERCADO_PAGO_BACK_URL is not configured.',
-    );
-  }
-  let parsedBackUrl;
-  try {
-    parsedBackUrl = new URL(backUrl);
-  } catch {
-    throw new MercadoPagoConfigurationError(
-      'MERCADO_PAGO_BACK_URL must be a valid HTTP(S) URL.',
-    );
-  }
-  if (
-    !['https:', 'http:'].includes(parsedBackUrl.protocol) ||
-    (parsedBackUrl.protocol === 'http:' &&
-      !['que-peixe-e-esse.com'].includes(parsedBackUrl.hostname)) // <-- Ajuste o hostname aqui para o domínio completo
-  ) {
-    throw new MercadoPagoConfigurationError(
-      'MERCADO_PAGO_BACK_URL must use HTTPS outside localhost.',
-    );
-  }
+const PIX_EXPIRATION_MS = 24 * 60 * 60 * 1000;
 
-  // --- Crie o payload em uma variável ANTES de usar ---
-  const mercadoPagoPayload = {
-    reason: `Assinatura ${plan.name}`,
-    external_reference: subscriptionId,
-    payer_email: email,
-    back_url: backUrl,
-    auto_recurring: {
-      frequency: plan.frequency,
-      frequency_type: 'months', // <-- VERIFIQUE SE plan.frequency_type DEVERIA SER USADO AQUI ou se 'months' é fixo
-      transaction_amount: plan.amount,
-      currency_id: 'BRL',
-    },
+export async function createPixPayment({ subscriptionId, user, plan }) {
+  const [firstName, ...lastNameParts] = user.name.trim().split(/\s+/);
+  const payer = {
+    email: user.email,
+    first_name: firstName,
   };
+  if (lastNameParts.length > 0) {
+    payer.last_name = lastNameParts.join(' ');
+  }
+  if (user.cpf) {
+    payer.identification = { type: 'CPF', number: user.cpf };
+  }
 
-  console.log('Mercado Pago Preapproval Payload:', JSON.stringify(mercadoPagoPayload, null, 2)); // <-- AGORA VAI FUNCIONAR
-
-  const result = await request('/preapproval', {
+  const result = await request('/v1/payments', {
     method: 'POST',
     idempotencyKey: subscriptionId,
-    body: mercadoPagoPayload, // <-- Passe a variável payload aqui
+    body: {
+      transaction_amount: plan.amount,
+      description: `Assinatura ${plan.name}`,
+      payment_method_id: 'pix',
+      external_reference: subscriptionId,
+      date_of_expiration: new Date(
+        Date.now() + PIX_EXPIRATION_MS,
+      ).toISOString(),
+      payer,
+    },
   });
 
-  if (typeof result.id !== 'string' || typeof result.init_point !== 'string') {
+  const transactionData = result.point_of_interaction?.transaction_data;
+  if (
+    (typeof result.id !== 'number' && typeof result.id !== 'string') ||
+    typeof transactionData?.qr_code !== 'string' ||
+    typeof transactionData?.qr_code_base64 !== 'string'
+  ) {
     throw new MercadoPagoApiError(
       502,
-      'Mercado Pago did not return a subscription ID and checkout URL.',
+      'Mercado Pago did not return a Pix QR code for the payment.',
     );
   }
 
-  return result;
+  return {
+    id: result.id,
+    status: result.status,
+    qrCode: transactionData.qr_code,
+    qrCodeBase64: transactionData.qr_code_base64,
+    ticketUrl: transactionData.ticket_url,
+    expiresAt: result.date_of_expiration,
+  };
 }
 
-export async function getPreapproval(id) {
-  return request(`/preapproval/${encodeURIComponent(id)}`);
+export async function getPayment(id) {
+  return request(`/v1/payments/${encodeURIComponent(id)}`);
 }
 
-export async function cancelPreapproval(id) {
-  return request(`/preapproval/${encodeURIComponent(id)}`, {
+export async function cancelPayment(id) {
+  return request(`/v1/payments/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: { status: 'cancelled' },
   });
-}
-
-export async function getAuthorizedPayment(id) {
-  return request(`/authorized_payments/${encodeURIComponent(id)}`);
-}
-
-export async function searchAuthorizedPayments(preapprovalId) {
-  return request(
-    `/authorized_payments/search?preapproval_id=${encodeURIComponent(preapprovalId)}`,
-  );
 }
 
 export function verifyWebhookSignature({
@@ -207,7 +192,7 @@ export function getWebhookSignatureFailure({
 
   const received = Buffer.from(fields.v1, 'hex');
   // O Mercado Pago omite do manifest os campos ausentes na notificação
-  // (ex.: subscription_preapproval pode ser assinado sem o data.id), então
+  // (ex.: uma notificação pode ser assinada sem o data.id), então
   // validamos contra as variantes documentadas.
   const manifestCandidates = [
     `id:${dataId.toLowerCase()};request-id:${requestId};ts:${fields.ts};`,

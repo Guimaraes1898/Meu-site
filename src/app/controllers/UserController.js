@@ -1,6 +1,7 @@
-import { UniqueConstraintError } from 'sequelize';
+import { Op, UniqueConstraintError } from 'sequelize';
 import * as yup from 'yup';
 import User from '../models/user.js';
+import { isValidCpf, normalizeCpf } from '../services/cpf.js';
 import { hashPassword } from '../services/passwords.js';
 
 const userSchema = yup.object({
@@ -17,6 +18,14 @@ const userSchema = yup.object({
     .email('Informe um endereço de e-mail válido.')
     .max(254, 'O e-mail deve ter no máximo 254 caracteres.')
     .required('O e-mail é obrigatório.'),
+  cpf: yup
+    .string()
+    .typeError('O CPF deve ser um texto.')
+    .trim()
+    .test('cpf-valido', 'Informe um CPF válido.', (value) =>
+      value ? isValidCpf(value) : true,
+    )
+    .required('O CPF é obrigatório.'),
   password: yup
     .string()
     .typeError('A senha deve ser um texto.')
@@ -53,16 +62,22 @@ class UserController {
       throw error;
     }
 
-    const { name, email, password } = validatedData;
+    const { name, email, password, cpf } = validatedData;
     const normalizedEmail = email.trim().toLowerCase();
+    const normalizedCpf = normalizeCpf(cpf);
     const existingUser = await User.findOne({
-      where: { email: normalizedEmail },
+      where: {
+        [Op.or]: [{ email: normalizedEmail }, { cpf: normalizedCpf }],
+      },
     });
 
     if (existingUser) {
-      return response
-        .status(400)
-        .json({ message: 'Este e-mail já está cadastrado.' });
+      return response.status(400).json({
+        message:
+          existingUser.email === normalizedEmail
+            ? 'Este e-mail já está cadastrado.'
+            : 'Este CPF já está cadastrado.',
+      });
     }
 
     const passwordHash = await hashPassword(password);
@@ -72,14 +87,18 @@ class UserController {
       user = await User.create({
         name: name.trim(),
         email: normalizedEmail,
+        cpf: normalizedCpf,
         password_hash: passwordHash,
         admin: false,
       });
     } catch (error) {
       if (error instanceof UniqueConstraintError) {
-        return response
-          .status(400)
-          .json({ message: 'Este e-mail já está cadastrado.' });
+        const isCpfConflict = Object.keys(error.fields ?? {}).includes('cpf');
+        return response.status(400).json({
+          message: isCpfConflict
+            ? 'Este CPF já está cadastrado.'
+            : 'Este e-mail já está cadastrado.',
+        });
       }
       throw error;
     }

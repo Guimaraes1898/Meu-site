@@ -144,6 +144,11 @@ function showAccountForm(formName, { clearMessage = true } = {}) {
 function clearAccount() {
   sessionStorage.removeItem('accessToken');
   sessionStorage.removeItem('accountUser');
+  if (pixPollingId !== null) {
+    clearInterval(pixPollingId);
+    pixPollingId = null;
+  }
+  document.querySelector('.conta-pix').hidden = true;
   document.querySelector('#registerForm').reset();
   document.querySelector('#loginForm').reset();
   document.querySelector('.conta-boas-vindas').textContent = '';
@@ -204,6 +209,38 @@ async function apiRequest(path, options = {}) {
   return data;
 }
 
+let pixPollingId = null;
+
+function updatePixPolling(account) {
+  const shouldPoll =
+    Boolean(sessionStorage.getItem('accessToken')) &&
+    !account?.subscriptionActive &&
+    account?.subscription?.status === 'pending';
+  if (shouldPoll && pixPollingId === null) {
+    pixPollingId = setInterval(() => {
+      loadAccount().catch(() => {});
+    }, 10000);
+  } else if (!shouldPoll && pixPollingId !== null) {
+    clearInterval(pixPollingId);
+    pixPollingId = null;
+  }
+}
+
+function renderPixPayment(pix) {
+  const section = document.querySelector('.conta-pix');
+  if (!pix?.qrCode || !pix?.qrCodeBase64) {
+    section.hidden = true;
+    return;
+  }
+  section.hidden = false;
+  document.querySelector('.conta-pix-qrcode').src =
+    `data:image/png;base64,${pix.qrCodeBase64}`;
+  document.querySelector('.conta-pix-codigo').value = pix.qrCode;
+  document.querySelector('.conta-pix-expiracao').textContent = pix.expiresAt
+    ? `Pague até ${new Date(pix.expiresAt).toLocaleString('pt-BR')}. Após o vencimento, gere um novo Pix.`
+    : '';
+}
+
 function renderAccount(account, { loginCompleted = false } = {}) {
   document.querySelector('.conta-acoes').hidden = true;
   document.querySelector('.conta-formularios').hidden = true;
@@ -235,17 +272,20 @@ function renderAccount(account, { loginCompleted = false } = {}) {
       ? ` Acesso até ${new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}.`
       : '';
     subscriptionStatus.textContent = `Assinatura ativa.${endDate}`;
-    cancelButton.hidden =
-      subscription.status !== 'authorized' || subscription.cancelAtPeriodEnd;
+    cancelButton.hidden = true;
+    renderPixPayment(null);
   } else if (account.subscription?.status === 'pending') {
     subscriptionStatus.textContent =
-      'Pagamento aguardando confirmação do Mercado Pago.';
-    cancelButton.hidden = !account.subscription.hasProviderSubscription;
+      'Pagamento Pix aguardando confirmação. Assim que o banco confirmar, o acesso é liberado automaticamente.';
+    cancelButton.hidden = false;
+    renderPixPayment(account.subscription.pix);
   } else {
     subscriptionStatus.textContent =
       'Sem assinatura ativa. Assine para liberar todas as ferramentas sem limite.';
     cancelButton.hidden = true;
+    renderPixPayment(null);
   }
+  updatePixPolling(account);
 
   const fishRemaining = account.tools['identify-fish'].remaining;
   const litersRemaining = account.tools['calculate-liters'].remaining;
@@ -309,13 +349,17 @@ async function loginAccount(event) {
 
 async function startSubscriptionCheckout() {
   try {
-    const { checkoutUrl } = await apiRequest('/subscriptions/checkout', {
+    await apiRequest('/subscriptions/checkout', {
       method: 'POST',
       body: JSON.stringify({
         plan: document.querySelector('#planSelect').value,
       }),
     });
-    window.location.assign(checkoutUrl);
+    await loadAccount();
+    setAccountMessage(
+      'Pix gerado! Escaneie o QR Code ou copie o código para pagar. O acesso é liberado assim que o pagamento for confirmado.',
+      'success',
+    );
   } catch (error) {
     // O checkout pode ter reconciliado o estado da assinatura com o
     // Mercado Pago; recarrega para refletir o estado real.
@@ -326,14 +370,13 @@ async function startSubscriptionCheckout() {
 
 async function cancelSubscription() {
   try {
-    const result = await apiRequest('/subscriptions/cancel', {
+    await apiRequest('/subscriptions/cancel', {
       method: 'POST',
     });
     await loadAccount();
     setAccountMessage(
-      result.accessUntil
-        ? `Renovação cancelada. O acesso permanece até ${new Date(result.accessUntil).toLocaleDateString('pt-BR')}.`
-        : 'Renovação cancelada.',
+      'Pagamento Pix cancelado. Você pode gerar um novo Pix quando quiser.',
+      'success',
     );
   } catch (error) {
     setAccountMessage(error.message);
@@ -680,6 +723,13 @@ document.addEventListener('DOMContentLoaded', () => {
   document
     .querySelector('#registerForm')
     .addEventListener('submit', registerAccount);
+  document.querySelector('#registerCpf').addEventListener('input', (event) => {
+    const digits = event.target.value.replace(/\D/g, '').slice(0, 11);
+    event.target.value = digits
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  });
   document.querySelector('#loginForm').addEventListener('submit', loginAccount);
   document.querySelector('#tabCadastro').addEventListener('click', () => {
     showAccountForm('register');
@@ -693,6 +743,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document
     .querySelector('.cancelar-assinatura')
     .addEventListener('click', cancelSubscription);
+  document
+    .querySelector('.conta-pix-copiar')
+    .addEventListener('click', async () => {
+      const input = document.querySelector('.conta-pix-codigo');
+      try {
+        await navigator.clipboard.writeText(input.value);
+      } catch {
+        input.select();
+        document.execCommand('copy');
+      }
+      setAccountMessage('Código Pix copiado!', 'success');
+    });
   document.querySelector('.sair-conta').addEventListener('click', () => {
     clearAccount();
     setAccountMessage('Você saiu da sua conta.');

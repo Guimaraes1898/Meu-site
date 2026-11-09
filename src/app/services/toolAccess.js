@@ -83,10 +83,18 @@ export async function getToolStatus(userId, now = new Date()) {
       ? {
           plan: subscription.plan,
           status: subscription.status,
-          hasProviderSubscription: Boolean(subscription.providerSubscriptionId),
+          hasProviderPayment: Boolean(subscription.providerPaymentId),
           currentPeriodEnd: subscription.currentPeriodEnd,
           cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
           lastPaymentStatus: subscription.lastPaymentStatus,
+          pix:
+            subscription.status === 'pending' && subscription.pixQrCode
+              ? {
+                  qrCode: subscription.pixQrCode,
+                  qrCodeBase64: subscription.pixQrCodeBase64,
+                  expiresAt: subscription.pixExpiresAt,
+                }
+              : null,
         }
       : null,
     tools,

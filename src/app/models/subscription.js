@@ -31,9 +31,18 @@ class Subscription extends Model {
           allowNull: false,
           defaultValue: 'pending',
         },
-        providerSubscriptionId: {
+        providerPaymentId: {
           type: DataTypes.STRING,
           unique: true,
+        },
+        pixQrCode: {
+          type: DataTypes.TEXT,
+        },
+        pixQrCodeBase64: {
+          type: DataTypes.TEXT,
+        },
+        pixExpiresAt: {
+          type: DataTypes.DATE,
         },
         currentPeriodEnd: {
           type: DataTypes.DATE,

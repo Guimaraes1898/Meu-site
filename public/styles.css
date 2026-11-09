@@ -33,6 +33,8 @@ body {
 	outline-offset: 2px;
 }
 
+/* !important intencional: a redução de movimento é uma necessidade de
+   acessibilidade e deve vencer qualquer especificidade. */
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
@@ -321,8 +323,46 @@ header p {
 .conta-logada[hidden],
 .conta-intro[hidden],
 .conta-plano[hidden],
+.conta-pix[hidden],
 .primary-button[hidden] {
 	display: none;
+}
+
+.conta-pix {
+	margin: 12px 0;
+	padding: 12px;
+	border: 1px solid var(--borda);
+	border-radius: 8px;
+	text-align: center;
+}
+
+.conta-pix-qrcode {
+	display: block;
+	max-width: 220px;
+	width: 100%;
+	margin: 8px auto;
+	background: #fff;
+	border-radius: 8px;
+}
+
+.conta-pix-copia {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.conta-pix-copia .conta-pix-codigo {
+	flex: 1;
+	min-width: 0;
+}
+
+.conta-pix-copia .primary-button {
+	flex-shrink: 0;
+}
+
+.conta-pix-expiracao {
+	font-size: 0.9em;
+	opacity: 0.85;
 }
 
 .conta-acao {

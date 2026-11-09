@@ -28,8 +28,8 @@ O cadastro e o login são necessários para usar as ferramentas e associar pagam
    ```
 
    Mantenha tokens e segredos apenas no `.env` local e nunca os envie ao navegador ou ao controle de versão.
-4. Para pagamentos, configure no `.env` o Access Token da mesma aplicação Mercado Pago em `MERCADO_PAGO_ACCESS_TOKEN`, o segredo de Webhooks em `MERCADO_PAGO_WEBHOOK_SECRET` e uma URL de retorno HTTPS em `MERCADO_PAGO_BACK_URL`. Use credenciais de teste até validar o fluxo; o Compose não possui credenciais padrão.
-5. Aponte a URL de notificações Webhooks do Mercado Pago para `POST /webhooks/mercadopago` em um endereço HTTPS acessível pelo Mercado Pago. Se estiver desenvolvendo localmente, use um túnel HTTPS. Habilite os eventos de assinatura e pagamentos autorizados.
+4. Para pagamentos, configure no `.env` o Access Token da mesma aplicação Mercado Pago em `MERCADO_PAGO_ACCESS_TOKEN` e o segredo de Webhooks em `MERCADO_PAGO_WEBHOOK_SECRET`. Use credenciais de teste até validar o fluxo; o Compose não possui credenciais padrão.
+5. Aponte a URL de notificações Webhooks do Mercado Pago para `POST /webhooks/mercadopago` em um endereço HTTPS acessível pelo Mercado Pago. Se estiver desenvolvendo localmente, use um túnel HTTPS. Habilite os eventos de pagamentos (`payment`), que confirmam os Pix recebidos.
 6. Inicie a instância SearXNG privada pelo Docker Compose, instale dependências, aplique as migrações e inicie a API:
 
    ```powershell
@@ -144,10 +144,10 @@ indisponível em vez de gerar recomendações sem fontes.
 - `POST /tools/find-stores` — requer autenticação e assinatura ativa; recebe `{"cep":"01001000"}` e devolve a URL de pesquisa do Google Maps. O CEP é consultado com fallback entre AwesomeAPI, ViaCEP e BrasilAPI.
 - `POST /users` — cria uma conta com `name`, `email` e `password` (de 8 a 128 caracteres e até 72 bytes em UTF-8). A senha é armazenada com bcrypt; em caso de dados inválidos, a resposta inclui o campo e o motivo.
 - `POST /sessions` — recebe `email` e `password`; retorna um token Bearer válido por uma hora.
-- `POST /subscriptions/checkout` — requer `Authorization: Bearer <token>` e JSON como `{"plan":"quarterly"}`; retorna `checkoutUrl`.
-- `GET /subscriptions/me` — requer autenticação; mostra o estado local da assinatura.
+- `POST /subscriptions/checkout` — requer `Authorization: Bearer <token>` e JSON como `{"plan":"quarterly"}`; cria um pagamento Pix no Mercado Pago e retorna `pix` com `qrCode` (copia e cola), `qrCodeBase64` (imagem) e `expiresAt`.
+- `GET /subscriptions/me` — requer autenticação; mostra o estado local da assinatura e, enquanto o Pix estiver pendente, os dados para pagamento em `pix`.
 - Se o Mercado Pago recusar o checkout, a resposta `502` informa o status HTTP e o código de erro do provedor, sem expor a mensagem bruta.
-- `POST /subscriptions/cancel` — requer autenticação; cancela a renovação no Mercado Pago e conserva a data final do período pago.
+- `POST /subscriptions/cancel` — requer autenticação; cancela um pagamento Pix ainda pendente. Pagamentos aprovados não são canceláveis: o acesso vale até o fim do período pago e não há renovação automática.
 - `POST /webhooks/mercadopago` — endpoint público para notificações; a assinatura HMAC é verificada antes de consultar o recurso diretamente na API do Mercado Pago.
 
-Uma assinatura em andamento impede criar outra até que o período vigente termine. Antes de ativar em produção, ainda é necessário definir a política de acesso durante falhas de renovação e validar criação, renovação e cancelamento com credenciais sandbox.
+O pagamento é feito com Pix avulso: o usuário escolhe o plano, paga o Pix e recebe acesso pelo período do plano (1, 3 ou 6 meses) contado da aprovação. Ao fim do período, ele renova com um novo Pix. Uma assinatura paga ou um Pix pendente impedem criar outro checkout até o fim do período ou o vencimento/cancelamento do Pix. Antes de ativar em produção, valide criação, confirmação e cancelamento de pagamentos com credenciais sandbox.

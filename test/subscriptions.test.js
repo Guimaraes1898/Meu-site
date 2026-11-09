@@ -3,7 +3,7 @@ import { createHmac, scryptSync } from 'node:crypto';
 import test from 'node:test';
 import { jwtVerify } from 'jose';
 import {
-  createPreapproval,
+  createPixPayment,
   MercadoPagoApiError,
   verifyWebhookSignature,
 } from '../src/app/services/MercadoPagoService.js';
@@ -168,52 +168,69 @@ test('webhook signature accepts manifests with omitted fields', () => {
   );
 });
 
-test('checkout creates a Mercado Pago preapproval using the selected plan', async () => {
+test('checkout creates a Mercado Pago Pix payment using the selected plan', async () => {
   const previousFetch = globalThis.fetch;
   const previousAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-  const previousBackUrl = process.env.MERCADO_PAGO_BACK_URL;
   process.env.MERCADO_PAGO_ACCESS_TOKEN = 'test-access-token';
-  process.env.MERCADO_PAGO_BACK_URL = 'https://example.com/return';
   let capturedRequest;
   globalThis.fetch = async (url, options) => {
     capturedRequest = { url, options };
     return new Response(
       JSON.stringify({
-        id: 'preapproval-123',
-        init_point: 'https://www.mercadopago.com/checkout/123',
+        id: 123456789,
+        status: 'pending',
+        date_of_expiration: '2026-11-10T12:00:00.000Z',
+        point_of_interaction: {
+          transaction_data: {
+            qr_code: 'pix-copia-e-cola',
+            qr_code_base64: 'aW1hZ2VtLXBpeA==',
+            ticket_url: 'https://www.mercadopago.com.br/payments/123/ticket',
+          },
+        },
       }),
       { status: 201, headers: { 'Content-Type': 'application/json' } },
     );
   };
 
   try {
-    const result = await createPreapproval({
+    const result = await createPixPayment({
       subscriptionId: 'subscription-123',
-      email: 'member@example.com',
+      user: {
+        name: 'Maria Silva',
+        email: 'member@example.com',
+        cpf: '12345678909',
+      },
       plan: subscriptionPlans.quarterly,
     });
 
-    assert.equal(result.id, 'preapproval-123');
+    assert.equal(result.id, 123456789);
+    assert.equal(result.qrCode, 'pix-copia-e-cola');
+    assert.equal(result.qrCodeBase64, 'aW1hZ2VtLXBpeA==');
+    assert.equal(result.expiresAt, '2026-11-10T12:00:00.000Z');
     assert.equal(
       capturedRequest.url,
-      'https://api.mercadopago.com/preapproval',
+      'https://api.mercadopago.com/v1/payments',
     );
     assert.equal(
       capturedRequest.options.headers['X-Idempotency-Key'],
       'subscription-123',
     );
-    assert.deepEqual(JSON.parse(capturedRequest.options.body), {
-      reason: 'Assinatura Trimestral',
-      external_reference: 'subscription-123',
-      payer_email: 'member@example.com',
-      back_url: 'https://example.com/return',
-      auto_recurring: {
-        frequency: 3,
-        frequency_type: 'months',
-        transaction_amount: 10,
-        currency_id: 'BRL',
-      },
+    const body = JSON.parse(capturedRequest.options.body);
+    assert.equal(body.transaction_amount, 10);
+    assert.equal(body.description, 'Assinatura Trimestral');
+    assert.equal(body.payment_method_id, 'pix');
+    assert.equal(body.external_reference, 'subscription-123');
+    assert.deepEqual(body.payer, {
+      email: 'member@example.com',
+      first_name: 'Maria',
+      last_name: 'Silva',
+      identification: { type: 'CPF', number: '12345678909' },
     });
+    const expiresAt = new Date(body.date_of_expiration);
+    assert.ok(!Number.isNaN(expiresAt.getTime()));
+    const expirationMs = expiresAt.getTime() - Date.now();
+    assert.ok(expirationMs > 23 * 60 * 60 * 1000);
+    assert.ok(expirationMs <= 24 * 60 * 60 * 1000);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousAccessToken === undefined) {
@@ -221,20 +238,13 @@ test('checkout creates a Mercado Pago preapproval using the selected plan', asyn
     } else {
       process.env.MERCADO_PAGO_ACCESS_TOKEN = previousAccessToken;
     }
-    if (previousBackUrl === undefined) {
-      delete process.env.MERCADO_PAGO_BACK_URL;
-    } else {
-      process.env.MERCADO_PAGO_BACK_URL = previousBackUrl;
-    }
   }
 });
 
 test('checkout errors expose only a safe Mercado Pago status and code', async () => {
   const previousFetch = globalThis.fetch;
   const previousAccessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-  const previousBackUrl = process.env.MERCADO_PAGO_BACK_URL;
   process.env.MERCADO_PAGO_ACCESS_TOKEN = 'test-access-token';
-  process.env.MERCADO_PAGO_BACK_URL = 'https://example.com/return';
   globalThis.fetch = async () =>
     new Response(
       JSON.stringify({
@@ -246,9 +256,9 @@ test('checkout errors expose only a safe Mercado Pago status and code', async ()
 
   try {
     await assert.rejects(
-      createPreapproval({
+      createPixPayment({
         subscriptionId: 'subscription-123',
-        email: 'member@example.com',
+        user: { name: 'Maria Silva', email: 'member@example.com' },
         plan: subscriptionPlans.monthly,
       }),
       (error) => {
@@ -264,11 +274,6 @@ test('checkout errors expose only a safe Mercado Pago status and code', async ()
       delete process.env.MERCADO_PAGO_ACCESS_TOKEN;
     } else {
       process.env.MERCADO_PAGO_ACCESS_TOKEN = previousAccessToken;
-    }
-    if (previousBackUrl === undefined) {
-      delete process.env.MERCADO_PAGO_BACK_URL;
-    } else {
-      process.env.MERCADO_PAGO_BACK_URL = previousBackUrl;
     }
   }
 });

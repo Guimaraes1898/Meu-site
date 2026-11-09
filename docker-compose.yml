@@ -21,18 +21,23 @@ services:
       # - "traefik.http.routers.que-peixe-e-esse-app.middlewares=redirect-to-https@docker"
     # --- FIM DAS LABELS DO TRAEFIK ---
 
+    extra_hosts:
+      # Permite alcançar o Postgres que roda fora desta rede Docker (host:5433)
+      - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
       PORT: 3001
-      DB_HOST: 'db'
-      DB_PORT: '${DB_PORT:-5432}'
+      # O banco de dados real roda fora desta rede Docker e é exposto no host
+      # na porta 5433. Não herdamos DB_HOST/DB_PORT do .env (que são para
+      # desenvolvimento local) para não apontar para o localhost do contêiner.
+      DB_HOST: 'host.docker.internal'
+      DB_PORT: '5433'
       DB_NAME: '${DB_NAME:-que-peixe-e-esse-db}'
       DB_USER: '${DB_USER:-admin}'
       DB_PASSWORD: '${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}'
       JWT_SECRET: '${JWT_SECRET:?Configure JWT_SECRET no arquivo .env}'
       MERCADO_PAGO_ACCESS_TOKEN: '${MERCADO_PAGO_ACCESS_TOKEN:-}'
       MERCADO_PAGO_WEBHOOK_SECRET: '${MERCADO_PAGO_WEBHOOK_SECRET:-}'
-      MERCADO_PAGO_BACK_URL: '${MERCADO_PAGO_BACK_URL:-https://que-peixe-e-esse.com}'
       PUTER_AUTH_TOKEN: '${PUTER_AUTH_TOKEN:-}'
       FISH_SEARCH_URL: '${FISH_SEARCH_URL:-http://searxng:8080}'
     restart: unless-stopped

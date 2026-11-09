@@ -15,7 +15,7 @@
         <span class="notification-toast-message"></span>
         <button type="button" class="notification-toast-close" aria-label="Fechar notificação">×</button>
     </div>
-    <!-- *** CORREÇÃO AQUI: O .page-wrapper AGORA ENVOLVE TODO O CONTEÚDO PRINCIPAL DENTRO DO <body> *** -->
+    
     <div class="page-wrapper">
 
         <header> 
@@ -42,6 +42,10 @@
                     <div class="cadastro-campo">
                         <label for="registerEmail">E-mail</label>
                         <input id="registerEmail" name="email" type="email" autocomplete="email" maxlength="254" required>
+                    </div>
+                    <div class="cadastro-campo">
+                        <label for="registerCpf">CPF</label>
+                        <input id="registerCpf" name="cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
                     </div>
                     <div class="cadastro-campo cadastro-campo-senha">
                         <label for="registerPassword">Senha (mínimo 8 caracteres)</label>
@@ -71,8 +75,17 @@
                     <option value="quarterly">Trimestral — R$ 10,00</option>
                     <option value="semiannual">Semestral — R$ 20,00</option>
                 </select>
-                <button class="primary-button iniciar-checkout" type="button">Assinar para liberar o site</button>
-                <button class="primary-button cancelar-assinatura" type="button" hidden>Cancelar renovação</button>
+                <button class="primary-button iniciar-checkout" type="button">Gerar Pix para liberar o site</button>
+                <div class="conta-pix" hidden>
+                    <p>Escaneie o QR Code com o app do seu banco ou copie o código Pix:</p>
+                    <img class="conta-pix-qrcode" alt="QR Code Pix para pagamento da assinatura" />
+                    <div class="conta-pix-copia">
+                        <input class="conta-pix-codigo" type="text" readonly aria-label="Código Pix copia e cola" />
+                        <button class="primary-button conta-pix-copiar" type="button">Copiar código</button>
+                    </div>
+                    <p class="conta-pix-expiracao"></p>
+                </div>
+                <button class="primary-button cancelar-assinatura" type="button" hidden>Cancelar pagamento Pix</button>
                 <button class="primary-button sair-conta" type="button">Sair / trocar de conta</button>
             </div>
         </section>
@@ -156,7 +169,7 @@
                 </section>
             </div>
 
-        </div> <!-- FIM do .tabs-container: AGORA ele envolve todos os tab-content -->
+        </div> 
 
         <footer class="site-footer">
             <p>🐟 Que Peixe é Esse? — Site de aquarista para aquaristas.</p>
