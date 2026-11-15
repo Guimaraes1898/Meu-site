@@ -111,6 +111,23 @@ Para aplicar a tabela de consumo no banco, execute `pnpm db:migrate` depois de
 atualizar o projeto. O cadastro continua disponível mesmo sem credenciais de
 pagamento, mas iniciar uma assinatura exige configurar Mercado Pago.
 
+### Conta do gerenciador
+
+Crie ou atualize a conta de administrador no servidor após aplicar as migrações:
+
+```sh
+pnpm admin:setup
+```
+
+Informe o e-mail atual para atualizar/promover uma conta existente ou deixe-o
+vazio para criar uma conta nova. O comando solicita o novo nome, e-mail e senha
+(digitada sem exibição) e salva a senha com hash. Execute-o em um terminal
+interativo; não inclua senhas em comandos ou arquivos versionados. O
+administrador tem acesso gratuito e ilimitado a todas as ferramentas, sem
+precisar iniciar uma assinatura. Em instalações Docker, use
+`docker compose run --rm app npm run admin:setup` (ou inclua o arquivo Compose
+de produção usado para iniciar o serviço).
+
 ### Identificação de peixes
 
 A foto é redimensionada no navegador e enviada ao backend, que a encaminha ao

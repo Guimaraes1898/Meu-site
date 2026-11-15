@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHmac, scryptSync } from 'node:crypto';
 import test from 'node:test';
 import { jwtVerify } from 'jose';
+import SubscriptionController from '../src/app/controllers/SubscriptionController.js';
 import {
   createPixPayment,
   MercadoPagoApiError,
@@ -24,6 +25,32 @@ test('subscription plans use the agreed BRL prices and billing intervals', () =>
       quarterly: [10, 3],
       semiannual: [20, 6],
     },
+  );
+});
+
+test('administrator checkout is rejected without creating a payment', async () => {
+  let statusCode;
+  let responseBody;
+  const response = {
+    status(code) {
+      statusCode = code;
+      return this;
+    },
+    json(body) {
+      responseBody = body;
+      return this;
+    },
+  };
+
+  await SubscriptionController.checkout(
+    { user: { admin: true }, body: { plan: 'monthly' } },
+    response,
+  );
+
+  assert.equal(statusCode, 403);
+  assert.equal(
+    responseBody.message,
+    'Administradores já têm acesso gratuito a todas as ferramentas.',
   );
 });
 

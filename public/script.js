@@ -271,7 +271,9 @@ function renderAccount(account, { loginCompleted = false } = {}) {
     const endDate = subscription.currentPeriodEnd
       ? ` Acesso até ${new Date(subscription.currentPeriodEnd).toLocaleDateString('pt-BR')}.`
       : '';
-    subscriptionStatus.textContent = `Assinatura ativa.${endDate}`;
+    subscriptionStatus.textContent = account.user.admin
+      ? 'Acesso gratuito de administrador. Todas as ferramentas estão liberadas.'
+      : `Assinatura ativa.${endDate}`;
     cancelButton.hidden = true;
     renderPixPayment(null);
   } else if (account.subscription?.status === 'pending') {

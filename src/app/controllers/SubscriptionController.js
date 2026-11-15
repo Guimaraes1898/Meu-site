@@ -159,6 +159,13 @@ function subscriptionBlocksCheckout(subscription, now = new Date()) {
 
 class SubscriptionController {
   async checkout(request, response) {
+    if (request.user.admin) {
+      return response.status(403).json({
+        message:
+          'Administradores já têm acesso gratuito a todas as ferramentas.',
+      });
+    }
+
     let data;
     try {
       data = await checkoutSchema.validate(request.body ?? {}, {

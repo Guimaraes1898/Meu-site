@@ -9,7 +9,10 @@ import {
   toolDefinitions,
 } from '../src/app/services/toolAccess.js';
 
-async function withAccessModels({ subscription = null, usage = null }, run) {
+async function withAccessModels(
+  { subscription = null, usage = null, admin = false },
+  run,
+) {
   const transaction = { LOCK: { UPDATE: 'UPDATE' } };
   const originalDescriptors = [
     [User, 'sequelize', Object.getOwnPropertyDescriptor(User, 'sequelize')],
@@ -43,7 +46,7 @@ async function withAccessModels({ subscription = null, usage = null }, run) {
     value: async (_userId, options) => {
       assert.equal(options.transaction, transaction);
       assert.equal(options.lock, transaction.LOCK.UPDATE);
-      return { id: 'user-id' };
+      return { id: 'user-id', admin };
     },
   });
   Object.defineProperty(Subscription, 'findOne', {
@@ -196,6 +199,23 @@ test('premium tools are denied without an active subscription', async () => {
 
     assert.equal(result.allowed, false);
     assert.equal(operationCalled, false);
+    assert.equal(createdUsages.length, 0);
+  });
+});
+
+test('administrator can use premium tools without subscription or trial usage', async () => {
+  const usage = { usageCount: 0 };
+  await withAccessModels({ admin: true, usage }, async ({ createdUsages }) => {
+    const result = await executeAuthorizedTool(
+      'user-id',
+      'plan-fauna',
+      async () => ({ planned: true }),
+    );
+
+    assert.equal(result.allowed, true);
+    assert.equal(result.subscriptionActive, true);
+    assert.equal(result.remaining, null);
+    assert.deepEqual(result.value, { planned: true });
     assert.equal(createdUsages.length, 0);
   });
 });

@@ -60,7 +60,8 @@ export async function getToolStatus(userId, now = new Date()) {
   const usageByTool = Object.fromEntries(
     usages.map(({ tool, usageCount }) => [tool, usageCount]),
   );
-  const subscriptionActive = isSubscriptionActive(subscription, now);
+  const subscriptionActive =
+    user.admin || isSubscriptionActive(subscription, now);
   const tools = Object.fromEntries(
     Object.entries(toolDefinitions).map(([tool, { trialLimit }]) => {
       const used = usageByTool[tool] ?? 0;
@@ -77,7 +78,12 @@ export async function getToolStatus(userId, now = new Date()) {
   );
 
   return {
-    user: { id: user.id, name: user.name, email: user.email },
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      admin: user.admin,
+    },
     subscriptionActive,
     subscription: subscription
       ? {
@@ -118,6 +124,15 @@ export async function executeAuthorizedTool(
     });
     if (!user) {
       return { userNotFound: true };
+    }
+
+    if (user.admin) {
+      return {
+        allowed: true,
+        subscriptionActive: true,
+        remaining: null,
+        value: await operation(),
+      };
     }
 
     const subscription = await findCurrentSubscription(userId, {
