@@ -45,6 +45,8 @@ const storesSchema = yup.object({
     .required(),
 });
 
+const STORE_SEARCH_RADIUS_KM = 15;
+
 class StoreLookupError extends Error {
   constructor(status, message, options) {
     super(message, options);
@@ -249,7 +251,7 @@ class ToolController {
           ]
             .filter(Boolean)
             .join(', ');
-          const query = `lojas de peixes ornamentais ou lojas de aquarismo perto de ${locality}`;
+          const query = `lojas de peixes ornamentais ou lojas de aquarismo em um raio de até ${STORE_SEARCH_RADIUS_KM} km de ${locality}`;
           const mapsUrl = new URL('https://www.google.com/maps/search/');
           mapsUrl.searchParams.set('api', '1');
           mapsUrl.searchParams.set('query', query);
