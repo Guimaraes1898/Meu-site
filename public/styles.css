@@ -189,7 +189,15 @@ header p {
 }
 
 
-.envieafoto label {
+.envieafoto-acoes {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 12px;
+	margin-top: 15px;
+}
+
+.envieafoto-opcao {
 	display: inline-block;
 	background-color: var(--ciano);
 	color: #06222e;
@@ -203,13 +211,12 @@ header p {
 		transform 0.2s ease,
 		box-shadow 0.3s ease;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-	margin-top: 15px;
 	position: relative;
 	overflow: hidden;
 	text-align: center;
 }
 
-.envieafoto label input[type="file"] {
+.envieafoto-opcao input[type="file"] {
 	position: absolute;
 	left: 0;
 	top: 0;
@@ -224,21 +231,23 @@ header p {
 	margin-bottom: 15px;
 }
 
-.envieafoto label h2 {
-	margin: 0;
-	color: inherit;
-	font-size: 1.1em;
-	display: inline;
+.foto-preview {
+	display: block;
+	max-width: 100%;
+	max-height: 420px;
+	margin: 18px auto 0;
+	border-radius: 8px;
+	object-fit: contain;
 }
 
-.envieafoto label:hover {
+.envieafoto-opcao:hover {
 	background-color: var(--ciano-hover);
 	color: #ffffff;
 	transform: translateY(-2px);
 	box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
 }
 
-.envieafoto label:active {
+.envieafoto-opcao:active {
 	background-color: var(--ciano-escuro);
 	color: #ffffff;
 	transform: translateY(0);

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=15112026_02">
+    <link rel="stylesheet" href="/styles.css?v=21112026_01">
 </head> 
 <body> 
     <div class="notification-toast" role="alert" aria-live="assertive" hidden>
@@ -100,10 +100,18 @@
  
             <div id="identificarPeixe" class="tab-content active" role="tabpanel" aria-labelledby="tab-identificarPeixe"> 
                 <div class="envieafoto"> 
-                    <label> 
-                        <h2>Envie a foto do peixe!</h2> 
-                        <input type="file" accept="image/*" class="foto" aria-label="Selecionar foto do peixe"> 
-                    </label> 
+                    <h2>Envie a foto do peixe!</h2>
+                    <div class="envieafoto-acoes">
+                        <label class="envieafoto-opcao">
+                            Tirar foto
+                            <input type="file" accept="image/*" capture="environment" class="foto-camera" aria-label="Tirar foto do peixe com a câmera">
+                        </label>
+                        <label class="envieafoto-opcao">
+                            Escolher da galeria
+                            <input type="file" accept="image/*" class="foto" aria-label="Selecionar foto do peixe da galeria">
+                        </label>
+                    </div>
+                    <img class="foto-preview" alt="Prévia da foto selecionada" hidden>
                 </div> 
                 <p class="privacy-notice">A foto é redimensionada no navegador, enviada ao backend deste site e encaminhada ao serviço externo de IA do Puter para sugerir uma espécie. O nome científico sugerido é pesquisado em guias de aquarismo, e a IA resume os cuidados básicos com links para as fontes. Não envie imagens com pessoas ou informações pessoais. A identificação e as recomendações podem estar incorretas; confira as fontes antes de aplicá-las.</p>
                 <div class="status-message" role="status" aria-live="polite"></div>  
@@ -181,6 +189,6 @@
 
     </div> 
 
-    <script src="/script.js?v=05112026_01"></script> 
+    <script src="/script.js?v=21112026_01"></script> 
 </body> 
 </html>

@@ -455,12 +455,28 @@ function restaurarEstadoPlanejador() {
   }
 }
 
-async function lerFoto() {
-  const inputFoto = document.querySelector('.foto');
+async function lerFoto(event) {
+  const inputFoto =
+    event?.currentTarget ?? document.querySelector('.foto-camera');
   const txtEspecie = document.querySelector('.especie');
   const txtCuidados = document.querySelector('.cuidados');
   const statusMessage = document.querySelector('.status-message');
   const arquivoImagem = inputFoto.files?.[0];
+  const inputGaleria = document.querySelector('.foto');
+  const inputCamera = document.querySelector('.foto-camera');
+  const preview = document.querySelector('.foto-preview');
+
+  if (inputFoto === inputCamera) {
+    inputGaleria.value = '';
+  } else if (inputFoto === inputGaleria) {
+    inputCamera.value = '';
+  }
+
+  if (preview.src) {
+    URL.revokeObjectURL(preview.src);
+  }
+  preview.removeAttribute('src');
+  preview.hidden = true;
 
   statusMessage.textContent = '';
   document.querySelector('.notification-toast').hidden = true;
@@ -491,6 +507,8 @@ async function lerFoto() {
   }
 
   try {
+    preview.src = URL.createObjectURL(arquivoImagem);
+    preview.hidden = false;
     statusMessage.textContent =
       'Preparando a imagem para análise no servidor...';
     const image = await redimensionarImagem(arquivoImagem);
@@ -769,6 +787,7 @@ document.addEventListener('DOMContentLoaded', () => {
       openTab(event, button.getAttribute('aria-controls')),
     );
   });
+  document.querySelector('.foto-camera').addEventListener('change', lerFoto);
   document.querySelector('.foto').addEventListener('change', lerFoto);
   document
     .querySelector('.calcular-litros')
