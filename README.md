@@ -93,9 +93,28 @@ Os arquivos HTML, CSS, JavaScript e imagens do frontend mais recente ficam em
 o backend, abra `http://localhost:3001`. A interface inclui identificação de
 peixes, cálculo de litros, planejamento de fauna e busca de lojas próximas.
 A interface permite criar conta, entrar, acompanhar o teste e iniciar ou
-cancelar a assinatura. Como frontend e API usam a mesma origem, não é
-necessário habilitar CORS para esse arranjo. O Dockerfile inclui os arquivos de
-`public/` na imagem.
+cancelar a assinatura. A página inicial apresenta o Instagram como canal de
+dicas e novidades, oferece guias de consulta e acesso às ferramentas
+interativas. Como frontend e API usam a mesma origem, não é necessário
+habilitar CORS para esse arranjo. O Dockerfile inclui os arquivos de `public/`
+na imagem.
+
+#### Métricas do Instagram e do site
+
+O Google Analytics 4 é carregado somente depois que a pessoa aceita as
+métricas; a preferência pode ser alterada no rodapé. O ID de medição está no
+atributo `content` de `meta[name="ga4-measurement-id"]` em
+`public/index.html`. A implementação usa o ID `G-9JG7R7FJNK` diretamente; o
+contêiner GTM informado separadamente não é carregado para evitar medições
+duplicadas. São registrados page views e eventos de cadastro, login e uso das
+ferramentas (`tool_use_identify_fish`, `tool_use_calculate_liters`,
+`tool_use_plan_fauna` e `tool_use_find_stores`), sem enviar valores dos
+formulários, fotos, CEP ou espécie identificada. O consentimento permite
+métricas e mantém armazenamento de anúncios negado.
+
+Para distinguir acessos vindos do Instagram, use como link da bio:
+`https://www.que-peixe-e-esse.com/?utm_source=instagram&utm_medium=social&utm_campaign=bio`.
+O GA4 usa esses parâmetros de campanha nos relatórios de aquisição.
 
 ### Login, teste gratuito e acesso às ferramentas
 

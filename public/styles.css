@@ -732,3 +732,230 @@ span.litros-resultado {
 	object-fit: cover;
 	border-radius: 50%;
 }
+
+.site-intro,
+.guias-site {
+	margin: 16px 0 20px;
+	padding: 24px;
+	border: 1px solid var(--borda);
+	border-radius: 16px;
+	background: var(--azul-card);
+	backdrop-filter: blur(12px);
+	-webkit-backdrop-filter: blur(12px);
+}
+
+.site-intro {
+	text-align: center;
+}
+
+.site-intro-eyebrow {
+	margin: 0 0 8px;
+	color: var(--ciano);
+	font-size: 0.9em;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.page-wrapper .site-intro h2,
+.page-wrapper .guias-site h2 {
+	margin: 0 0 12px;
+	color: var(--texto-destaque);
+	font-size: 1.65em;
+	line-height: 1.3;
+}
+
+.site-intro > p:not(.site-intro-eyebrow),
+.section-heading > p:not(.site-intro-eyebrow) {
+	max-width: 720px;
+	margin: 0 auto 12px;
+	line-height: 1.6;
+}
+
+.site-intro-actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	gap: 12px;
+	margin-top: 16px;
+}
+
+.site-intro-actions .primary-button {
+	margin-top: 0;
+}
+
+.secondary-button {
+	display: inline-block;
+	padding: 11px 20px;
+	border: 1px solid var(--borda);
+	border-radius: 8px;
+	color: var(--texto);
+	font-weight: 700;
+	text-align: center;
+	text-decoration: none;
+}
+
+.secondary-button:hover {
+	background: rgba(34, 211, 238, 0.16);
+	color: #fff;
+}
+
+.guias-site {
+	scroll-margin-top: 16px;
+}
+
+.section-heading {
+	margin-bottom: 18px;
+	text-align: center;
+}
+
+.guias-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.guia-card {
+	padding: 18px;
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+	background: rgba(4, 18, 31, 0.5);
+}
+
+.page-wrapper .guias-site .guia-card h3 {
+	margin: 0 0 10px;
+	color: var(--texto-destaque);
+	font-size: 1.1em;
+	line-height: 1.35;
+}
+
+.guia-card p {
+	margin: 0 0 10px;
+	line-height: 1.55;
+}
+
+.guia-card p:last-child {
+	margin-bottom: 0;
+}
+
+.guia-formula {
+	padding: 10px;
+	border-radius: 8px;
+	background: rgba(34, 211, 238, 0.12);
+	text-align: center;
+}
+
+.guias-instagram {
+	margin: 18px 0 0;
+	text-align: center;
+}
+
+.guias-instagram a {
+	color: var(--link);
+	font-weight: 700;
+}
+
+#conta,
+#ferramentas {
+	scroll-margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+	.site-intro,
+	.guias-site {
+		padding: 18px 14px;
+	}
+
+	.page-wrapper .site-intro h2,
+	.page-wrapper .guias-site h2 {
+		font-size: 1.4em;
+	}
+
+	.guias-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.site-intro-actions {
+		align-items: stretch;
+		flex-direction: column;
+	}
+}
+
+.analytics-consent:not([hidden]) {
+	position: fixed;
+	z-index: 1100;
+	right: 16px;
+	bottom: 16px;
+	width: min(620px, calc(100vw - 32px));
+	padding: 18px 20px;
+	border: 1px solid var(--borda);
+	border-radius: 12px;
+	background: #08263a;
+	box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+	color: var(--texto);
+}
+
+.analytics-consent[aria-labelledby] h2 {
+	margin: 0 0 8px;
+	color: var(--texto-destaque);
+	font-size: 1.15em;
+}
+
+.analytics-consent p {
+	margin: 0;
+	line-height: 1.5;
+}
+
+.analytics-consent-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 14px;
+}
+
+.analytics-consent-actions button,
+.analytics-settings {
+	padding: 9px 14px;
+	border: 1px solid var(--borda);
+	border-radius: 7px;
+	background: transparent;
+	color: var(--texto);
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.analytics-consent-actions .analytics-consent-accept {
+	border-color: var(--ciano);
+	background: var(--ciano);
+	color: #06222e;
+}
+
+.analytics-consent-actions button:hover,
+.analytics-settings:hover {
+	background: rgba(34, 211, 238, 0.2);
+	color: #fff;
+}
+
+.analytics-consent-actions .analytics-consent-accept:hover {
+	background: var(--ciano-hover);
+}
+
+.site-footer .analytics-settings {
+	margin: 0;
+	font-size: 0.9em;
+}
+
+@media (max-width: 480px) {
+	.analytics-consent:not([hidden]) {
+		right: 10px;
+		bottom: 10px;
+		width: calc(100vw - 20px);
+		padding: 16px;
+	}
+
+	.analytics-consent-actions {
+		flex-direction: column-reverse;
+	}
+}

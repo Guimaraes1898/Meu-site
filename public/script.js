@@ -43,6 +43,113 @@ function renderizarFontesCuidados(sources) {
 }
 
 let notificationTimeout;
+let analyticsConsent = null;
+let analyticsInitialized = false;
+
+function getAnalyticsMeasurementId() {
+  const measurementId = document
+    .querySelector('meta[name="ga4-measurement-id"]')
+    ?.content.trim();
+  return measurementId && /^G-[A-Z0-9]+$/.test(measurementId)
+    ? measurementId
+    : null;
+}
+
+function loadGoogleAnalytics() {
+  const measurementId = getAnalyticsMeasurementId();
+  if (!measurementId) {
+    return;
+  }
+
+  window[`ga-disable-${measurementId}`] = false;
+  if (analyticsInitialized) {
+    window.gtag('consent', 'update', {
+      analytics_storage: 'granted',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+    });
+    return;
+  }
+
+  let dataLayer = window.dataLayer;
+  if (!dataLayer) {
+    dataLayer = [];
+    window.dataLayer = dataLayer;
+  }
+  window.gtag = (...args) => dataLayer.push(args);
+  window.gtag('consent', 'default', {
+    analytics_storage: 'granted',
+    ad_storage: 'denied',
+    ad_user_data: 'denied',
+    ad_personalization: 'denied',
+  });
+  window.gtag('js', new Date());
+  window.gtag('config', measurementId);
+
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
+  script.onerror = () => {
+    analyticsInitialized = false;
+    console.error('Não foi possível carregar o Google Analytics.');
+  };
+  document.head.append(script);
+  analyticsInitialized = true;
+}
+
+function setAnalyticsConsent(consent) {
+  analyticsConsent = consent;
+  try {
+    localStorage.setItem('ga4AnalyticsConsent', consent);
+  } catch (error) {
+    console.warn('Não foi possível salvar a preferência de métricas.', error);
+  }
+
+  document.querySelector('.analytics-consent').hidden = true;
+  if (consent === 'granted') {
+    loadGoogleAnalytics();
+  } else if (analyticsInitialized) {
+    const measurementId = getAnalyticsMeasurementId();
+    window[`ga-disable-${measurementId}`] = true;
+    window.gtag('consent', 'update', {
+      analytics_storage: 'denied',
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+    });
+  }
+}
+
+function initializeAnalyticsPreferences() {
+  const measurementId = getAnalyticsMeasurementId();
+  if (!measurementId) {
+    return;
+  }
+
+  document.querySelector('.analytics-settings-row').hidden = false;
+  try {
+    analyticsConsent = localStorage.getItem('ga4AnalyticsConsent');
+  } catch (error) {
+    console.warn('Não foi possível ler a preferência de métricas.', error);
+  }
+
+  if (analyticsConsent === 'granted') {
+    loadGoogleAnalytics();
+  } else if (analyticsConsent !== 'denied') {
+    document.querySelector('.analytics-consent').hidden = false;
+  }
+}
+
+function trackAnalyticsEvent(eventName, parameters = {}) {
+  if (
+    analyticsConsent === 'granted' &&
+    analyticsInitialized &&
+    typeof window.gtag === 'function'
+  ) {
+    window.gtag('event', eventName, parameters);
+  }
+}
 
 function showNotification(message) {
   const notification = document.querySelector('.notification-toast');
@@ -318,6 +425,7 @@ async function registerAccount(event) {
       method: 'POST',
       body: JSON.stringify(user),
     });
+    trackAnalyticsEvent('sign_up', { method: 'email' });
     document.querySelector('#loginEmail').value = user.email;
     form.reset();
     showAccountForm('login', { clearMessage: false });
@@ -340,6 +448,7 @@ async function loginAccount(event) {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
+    trackAnalyticsEvent('login', { method: 'email' });
     sessionStorage.setItem('accessToken', session.token);
     sessionStorage.setItem('accountUser', JSON.stringify(session.user));
     form.reset();
@@ -517,6 +626,7 @@ async function lerFoto(event) {
       headers: { 'Content-Type': 'image/jpeg' },
       body: image,
     });
+    trackAnalyticsEvent('tool_use_identify_fish');
     await loadAccount();
 
     if (!result.identified) {
@@ -601,6 +711,7 @@ async function analisarCompatibilidade() {
         existingSpecies: peixesExistentes,
       }),
     });
+    trackAnalyticsEvent('tool_use_plan_fauna');
     await loadAccount();
     resultado.textContent = resposta.analysis;
     status.textContent = 'Análise concluída. Confira as ressalvas abaixo.';
@@ -668,6 +779,7 @@ async function calcularLitros() {
         height: altura,
       }),
     });
+    trackAnalyticsEvent('tool_use_calculate_liters');
     resultado.innerText = Number(data.liters).toFixed(2);
     await loadAccount();
   } catch (erro) {
@@ -717,6 +829,7 @@ async function buscarLojasProximas() {
       method: 'POST',
       body: JSON.stringify({ cep }),
     });
+    trackAnalyticsEvent('tool_use_find_stores');
     await loadAccount();
     janela.location.replace(data.mapsUrl);
     status.textContent = 'Pesquisa aberta no Google Maps.';
@@ -733,6 +846,7 @@ async function buscarLojasProximas() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  initializeAnalyticsPreferences();
   restaurarEstadoPlanejador();
   document
     .querySelector('.notification-toast-close')
@@ -757,6 +871,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('#tabLogin').addEventListener('click', () => {
     showAccountForm('login');
   });
+  document
+    .querySelector('#analyticsSettings')
+    .addEventListener('click', () => {
+      if (getAnalyticsMeasurementId()) {
+        document.querySelector('.analytics-consent').hidden = false;
+      }
+    });
+  document
+    .querySelector('.analytics-consent-reject')
+    .addEventListener('click', () => setAnalyticsConsent('denied'));
+  document
+    .querySelector('.analytics-consent-accept')
+    .addEventListener('click', () => setAnalyticsConsent('granted'));
   document
     .querySelector('.iniciar-checkout')
     .addEventListener('click', startSubscriptionCheckout);

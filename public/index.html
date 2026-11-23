@@ -4,17 +4,31 @@
     <meta charset="UTF-8"> 
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
     <title>Que peixe é esse?</title>
+    <meta name="description" content="Dicas e guias de aquarismo para aprofundar o conteúdo do Instagram, com ferramentas para identificar peixes, calcular litros e planejar seu aquário.">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Que Peixe é Esse? — Aquarismo além do Instagram">
+    <meta property="og:description" content="Dicas e guias de aquarismo, identificação de peixes e ferramentas para cuidar melhor do seu aquário.">
+    <meta property="og:image" content="https://que-peixe-e-esse.com/aquarismo-s2.png">
+    <meta name="ga4-measurement-id" content="G-9JG7R7FJNK">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐟</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap">
-    <link rel="stylesheet" href="/styles.css?v=21112026_01">
+    <link rel="stylesheet" href="/styles.css?v=20261123_05">
 </head> 
 <body> 
     <div class="notification-toast" role="alert" aria-live="assertive" hidden>
         <span class="notification-toast-message"></span>
         <button type="button" class="notification-toast-close" aria-label="Fechar notificação">×</button>
     </div>
+    <aside class="analytics-consent" aria-labelledby="analyticsConsentTitle" hidden>
+        <h2 id="analyticsConsentTitle">Preferências de métricas</h2>
+        <p>Se o Google Analytics estiver configurado, ele mede visitas e interações do site. Os eventos não incluem dados digitados nos formulários, fotos ou CEP. Você pode aceitar ou recusar; sua escolha pode ser alterada no rodapé.</p>
+        <div class="analytics-consent-actions">
+            <button type="button" class="analytics-consent-reject">Recusar</button>
+            <button type="button" class="analytics-consent-accept">Aceitar métricas</button>
+        </div>
+    </aside>
     
     <div class="page-wrapper">
 
@@ -23,7 +37,44 @@
             <p>Site de aquarista para aquaristas!</p> 
         </header> 
 
-        <section class="conta-section">
+        <section class="site-intro" aria-labelledby="siteIntroTitle">
+            <p class="site-intro-eyebrow">Mais conteúdo no Instagram. Mais recursos por aqui.</p>
+            <h2 id="siteIntroTitle">Do feed para o seu aquário: informação para consultar e usar.</h2>
+            <p>No Instagram, <strong>@aquarismo.s2</strong> compartilha dicas e novidades. Aqui você encontra guias para consultar com calma e ferramentas para apoiar o cuidado com seus peixes.</p>
+            <div class="site-intro-actions">
+                <a class="primary-button instagram-cta" href="https://www.instagram.com/aquarismo.s2/" target="_blank" rel="noopener noreferrer">Acompanhe no Instagram <span aria-hidden="true">↗</span></a>
+                <a class="secondary-button" href="#ferramentas">Explore as ferramentas do site</a>
+            </div>
+        </section>
+
+        <section class="guias-site" id="guias-site" aria-labelledby="guiasTitle">
+            <div class="section-heading">
+                <p class="site-intro-eyebrow">Conteúdo para guardar e consultar</p>
+                <h2 id="guiasTitle">Guias de aquarismo</h2>
+                <p>O Instagram é ótimo para descobrir uma dica; estes guias ajudam a rever os pontos principais com mais contexto.</p>
+            </div>
+            <div class="guias-grid">
+                <article class="guia-card">
+                    <h3>Como calcular a litragem do aquário</h3>
+                    <p>Use as medidas internas do aquário para estimar o volume geométrico:</p>
+                    <p class="guia-formula"><strong>comprimento × largura × altura ÷ 1.000</strong></p>
+                    <p>Com as medidas em centímetros, o resultado é em litros. É uma estimativa bruta: substrato, decoração e equipamentos ocupam espaço, e a litragem sozinha não determina quantos peixes o aquário comporta.</p>
+                </article>
+                <article class="guia-card">
+                    <h3>Antes de escolher um peixe</h3>
+                    <p>Pesquise o nome científico e confira o tamanho adulto, a temperatura e os parâmetros de água, o comportamento e as necessidades de espaço. Considere também os peixes que já vivem no aquário e a estabilidade do sistema.</p>
+                    <p>Uma análise de compatibilidade é apenas um ponto de partida: confirme as necessidades de cada espécie antes de decidir.</p>
+                </article>
+                <article class="guia-card">
+                    <h3>Como usar uma identificação por foto</h3>
+                    <p>Uma foto pode ajudar a levantar uma hipótese sobre a espécie, mas semelhanças entre peixes e a qualidade da imagem podem levar a erros. Compare a sugestão com características visíveis e consulte fontes confiáveis.</p>
+                    <p>Não use uma identificação automática como única base para tratar um peixe ou mudar as condições do aquário.</p>
+                </article>
+            </div>
+            <p class="guias-instagram">Para acompanhar as dicas e novidades do dia a dia, visite <a href="https://www.instagram.com/aquarismo.s2/" target="_blank" rel="noopener noreferrer">@aquarismo.s2 no Instagram</a>.</p>
+        </section>
+
+        <section class="conta-section" id="conta">
             <h2>Conta e acesso</h2>
             <p class="conta-intro">Crie uma conta para testar uma identificação de peixe e um cálculo de litros. Para usar as demais ferramentas ou continuar após o teste, assine um plano.</p>
             <p class="conta-mensagem" role="status" aria-live="polite"></p>
@@ -90,7 +141,7 @@
             </div>
         </section>
 
-        <div class="tabs-container"> 
+        <div class="tabs-container" id="ferramentas">
             <div class="tab-buttons" role="tablist"> 
                 <button type="button" id="tab-identificarPeixe" class="tab-button active" aria-controls="identificarPeixe" role="tab" aria-selected="true">Identificar Peixe</button> 
                 <button type="button" id="tab-calcularLitros" class="tab-button" aria-controls="calcularLitros" role="tab" aria-selected="false"> Litros do Aquário</button> 
@@ -184,11 +235,12 @@
             <p>Também é apaixonado por aquarismo? Venha fazer parte da nossa comunidade no Instagram!</p>
             <p><a class="instagram-link" href="https://www.instagram.com/aquarismo.s2/" target="_blank" rel="noopener noreferrer"><img src="/aquarismo-s2.png" alt="">@aquarismo.s2</a></p>
             <p>As identificações e recomendações são geradas por IA e podem conter erros. Confira sempre as fontes antes de aplicar qualquer cuidado.</p>
-            <p>Privacidade: fotos enviadas são processadas apenas para identificação e não são publicadas. O CEP informado é usado somente para localizar lojas próximas.</p>
+            <p>Privacidade: fotos enviadas são processadas apenas para identificação e não são publicadas. O CEP informado é usado somente para localizar lojas próximas. Métricas do Google Analytics só são ativadas após consentimento e configuração do site.</p>
+            <p class="analytics-settings-row" hidden><button type="button" class="analytics-settings" id="analyticsSettings">Preferências de métricas</button></p>
         </footer>
 
     </div> 
 
-    <script src="/script.js?v=21112026_01"></script> 
+    <script src="/script.js?v=20261123_04"></script>
 </body> 
 </html>
