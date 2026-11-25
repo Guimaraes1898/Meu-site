@@ -21,11 +21,17 @@
 body {
 	margin: 0;
 	font-family: "Inter", "Segoe UI", system-ui, Arial, sans-serif;
-	background:
-		linear-gradient(rgba(4, 18, 31, 0.62), rgba(4, 18, 31, 0.72)),
-		url("background.site.jpg") center / cover fixed;
+	background: linear-gradient(160deg, #08263a 0%, #04121f 65%, #020b12 100%);
 	min-height: 100vh;
 	color: var(--texto);
+}
+
+@media (min-width: 769px) {
+	body {
+		background:
+			linear-gradient(rgba(4, 18, 31, 0.62), rgba(4, 18, 31, 0.72)),
+			url("background.site.jpg") center / cover fixed;
+	}
 }
 
 :focus-visible {
@@ -303,6 +309,21 @@ header p {
 	backdrop-filter: blur(12px);
 	-webkit-backdrop-filter: blur(12px);
 	color: var(--texto);
+}
+
+.conta-section[hidden] {
+	display: none;
+}
+
+.conta-heading {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.conta-fechar {
+	margin: 0;
 }
 
 .page-wrapper .conta-section h2,
@@ -671,12 +692,43 @@ header p {
 	.tab-buttons {
 		flex-wrap: nowrap;
 		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		scroll-snap-type: x proximity;
+		scrollbar-color: var(--ciano) transparent;
+		scrollbar-width: thin;
+	}
+	.tab-buttons::-webkit-scrollbar {
+		height: 6px;
+	}
+	.tab-buttons::-webkit-scrollbar-thumb {
+		border-radius: 999px;
+		background: var(--ciano);
+	}
+	.tab-buttons::-webkit-scrollbar-track {
+		background: transparent;
 	}
 	.tab-button {
+		flex: 0 0 auto;
+		min-height: 44px;
 		white-space: nowrap;
+		scroll-snap-align: start;
 	}
 	.tab-content {
 		padding: 10px 10px 20px 10px; 
+	}
+	.primary-button,
+	.envieafoto-opcao,
+	.secondary-button,
+	.conta-acao,
+	.analytics-consent-actions button {
+		min-height: 44px;
+	}
+	.tab-content input[type="text"],
+	.tab-content input[type="number"],
+	.conta-section input,
+	.conta-section select {
+		min-height: 44px;
+		font-size: 16px;
 	}
 	.conta-formularios #registerForm {
 		grid-template-columns: 1fr;
@@ -790,10 +842,14 @@ span.litros-resultado {
 	padding: 11px 20px;
 	border: 1px solid var(--borda);
 	border-radius: 8px;
+	background: transparent;
 	color: var(--texto);
+	font: inherit;
 	font-weight: 700;
 	text-align: center;
 	text-decoration: none;
+	cursor: pointer;
+	appearance: none;
 }
 
 .secondary-button:hover {
@@ -941,6 +997,15 @@ span.litros-resultado {
 }
 
 @media (max-width: 480px) {
+	.conta-pix-copia {
+		align-items: stretch;
+		flex-direction: column;
+	}
+
+	.conta-pix-copia .primary-button {
+		width: 100%;
+	}
+
 	.analytics-consent:not([hidden]) {
 		right: 10px;
 		bottom: 10px;

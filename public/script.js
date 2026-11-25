@@ -248,6 +248,39 @@ function showAccountForm(formName, { clearMessage = true } = {}) {
   }
 }
 
+function openAccountSection(formName) {
+  const section = document.querySelector('.conta-section');
+  section.hidden = false;
+  document.querySelectorAll('.conta-trigger').forEach((trigger) => {
+    trigger.setAttribute('aria-expanded', 'true');
+  });
+
+  if (!sessionStorage.getItem('accessToken')) {
+    showAccountForm(formName);
+  }
+  section.scrollIntoView({ block: 'start' });
+  if (!sessionStorage.getItem('accessToken')) {
+    document
+      .querySelector(formName === 'register' ? '#registerName' : '#loginEmail')
+      .focus({ preventScroll: true });
+  }
+}
+
+function closeAccountSection() {
+  document.querySelector('.conta-section').hidden = true;
+  document.querySelectorAll('.conta-trigger').forEach((trigger) => {
+    trigger.setAttribute('aria-expanded', 'false');
+  });
+  const selectedForm =
+    document.querySelector('#tabCadastro').getAttribute('aria-selected') ===
+    'true'
+      ? 'register'
+      : 'login';
+  document
+    .querySelector(`[data-account-form="${selectedForm}"]`)
+    .focus({ preventScroll: true });
+}
+
 function clearAccount() {
   sessionStorage.removeItem('accessToken');
   sessionStorage.removeItem('accountUser');
@@ -871,6 +904,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelector('#tabLogin').addEventListener('click', () => {
     showAccountForm('login');
   });
+  document.querySelectorAll('.conta-trigger').forEach((trigger) => {
+    trigger.addEventListener('click', () => {
+      openAccountSection(trigger.dataset.accountForm);
+    });
+  });
+  document
+    .querySelector('.conta-fechar')
+    .addEventListener('click', closeAccountSection);
   document
     .querySelector('#analyticsSettings')
     .addEventListener('click', () => {
@@ -907,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setAccountMessage('Você saiu da sua conta.');
   });
   if (sessionStorage.getItem('accessToken')) {
+    document.querySelector('.conta-section').hidden = false;
     loadAccount();
   }
   document.querySelectorAll('.tab-button').forEach((button) => {
